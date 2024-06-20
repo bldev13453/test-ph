@@ -21,5 +21,8 @@ export class Boot extends Scene {
 
   create() {
     this.scene.start("Preloader");
+    if (window?.Telegram?.WebApp) {
+      window.Telegram.WebApp.expand();
+    }
   }
 }
