@@ -1,4 +1,4 @@
-import { Scene } from "phaser";
+import { Scene, Physics, GameObjects, Math as PhaserMath } from "phaser";
 
 const CONFIG = {
   startPosition: { x: 50, y: 50 },
@@ -11,12 +11,19 @@ const CONFIG = {
 };
 
 export class Game extends Scene {
+  private player!: Physics.Arcade.Sprite;
+  private platforms!: Physics.Arcade.StaticGroup;
+  private platformGroup!: GameObjects.Group;
+  private spikes!: Physics.Arcade.StaticGroup;
+  private positionText!: GameObjects.Text;
+  private hearts!: GameObjects.Group;
+
   constructor() {
     super("Game");
   }
 
-  create() {
-    const { width, height } = this.scale;
+  create(): void {
+    const { height } = this.scale;
     this.player = this.physics.add.sprite(
       CONFIG.startPosition.x,
       height - 300,
@@ -42,7 +49,7 @@ export class Game extends Scene {
     // Платформы
     this.platforms = this.physics.add.staticGroup();
     this.platformGroup = this.add.group({
-      removeCallback: (platform) => {
+      removeCallback: (platform: GameObjects.GameObject) => {
         this.platforms.killAndHide(platform);
       },
     });
@@ -59,8 +66,8 @@ export class Game extends Scene {
     this.physics.add.overlap(
       this.player,
       this.spikes,
-      this.hitSpike,
-      null,
+      this.hitSpike as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
+      undefined,
       this
     );
 
@@ -78,7 +85,7 @@ export class Game extends Scene {
     // Текст позиции игрока
     this.positionText = this.add.text(10, 50, "X: 0", {
       font: "16px Arial",
-      fill: "#000000",
+      // fill: "#000000",
     });
 
     this.hearts = this.add.group({
@@ -86,18 +93,24 @@ export class Game extends Scene {
       repeat: 2,
       setXY: { x: 30, y: 30, stepX: 20 },
     });
-    this.hearts.getChildren().forEach((heart) => {
-      heart.setScrollFactor(0).setScale(0.3);
+    this.hearts.getChildren().forEach((heart: GameObjects.GameObject) => {
+      (heart as GameObjects.Image).setScrollFactor(0).setScale(0.3);
     });
   }
 
-  update() {
-    this.platformGroup.getChildren().forEach((platform) => {
-      if (platform.x < this.cameras.main.scrollX - platform.displayWidth) {
-        this.platformGroup.killAndHide(platform);
-        this.platformGroup.remove(platform);
-      }
-    });
+  update(): void {
+    this.platformGroup
+      .getChildren()
+      .forEach((platform: GameObjects.GameObject) => {
+        if (
+          (platform as GameObjects.Image).x <
+          this.cameras.main.scrollX -
+            (platform as GameObjects.Image).displayWidth
+        ) {
+          this.platformGroup.killAndHide(platform);
+          this.platformGroup.remove(platform);
+        }
+      });
 
     if (this.input.activePointer.isDown) {
       this.jump();
@@ -108,19 +121,21 @@ export class Game extends Scene {
 
     // get Y position for the last platform
     const lastPlatform = this.platformGroup.getLast(true);
-    const lastPlatformY = lastPlatform ? lastPlatform.y : 0;
+    const lastPlatformY = lastPlatform
+      ? (lastPlatform as GameObjects.Image).y
+      : 0;
     if (this.player.y > lastPlatformY + 500) {
       this.scene.start("GameOver");
     }
   }
 
-  jump() {
-    if (this.player.body.touching.down) {
+  jump(): void {
+    if (this.player.body?.touching.down) {
       this.player.setVelocityY(-CONFIG.jumpPower);
     }
   }
 
-  createPlatform(x, y, platformLength = 3) {
+  createPlatform(x: number, y: number, platformLength = 3): void {
     let lastX = x;
     for (let i = 0; i < platformLength; i++) {
       const block = this.platforms.create(lastX, y, "platform");
@@ -136,7 +151,7 @@ export class Game extends Scene {
       lastX += block.displayWidth;
       console.log(this.player.x, CONFIG.startGenerateItemsCoordinateX);
       if (this.player.x > CONFIG.startGenerateItemsCoordinateX) {
-        if (Phaser.Math.Between(0, 1) === 1) {
+        if (PhaserMath.Between(0, 1) === 1) {
           // 50% вероятность
           const coin = this.physics.add.sprite(
             lastX - block.displayWidth / 2,
@@ -147,11 +162,12 @@ export class Game extends Scene {
           this.physics.add.overlap(
             this.player,
             coin,
-            this.collectCoin,
-            null,
+            this
+              .collectCoin as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
+            undefined,
             this
           );
-        } else if (Phaser.Math.Between(0, 9) < 1) {
+        } else if (PhaserMath.Between(0, 9) < 1) {
           // 20% вероятность появления шипов
           this.createSpikes(
             lastX - block.displayWidth,
@@ -163,7 +179,7 @@ export class Game extends Scene {
     }
   }
 
-  createSpikes(x, y, count) {
+  createSpikes(x: number, y: number, count: number): void {
     for (let i = 0; i < count; i++) {
       const spike = this.spikes.create(x + i * (64 * CONFIG.scale), y, "spike");
       spike.setOrigin(0, 1);
@@ -172,7 +188,7 @@ export class Game extends Scene {
     }
   }
 
-  hitSpike(player, spike) {
+  hitSpike(player: Physics.Arcade.Sprite, spike: Physics.Arcade.Sprite): void {
     this.player.setTint(0xff0000);
     this.time.addEvent({
       delay: 200,
@@ -183,7 +199,7 @@ export class Game extends Scene {
     });
 
     // Уменьшаем количество сердец
-    const heart = this.hearts.getFirstAlive();
+    const heart = this.hearts.getFirstAlive() as GameObjects.Image;
     if (heart) {
       this.tweens.add({
         targets: heart,
@@ -198,33 +214,38 @@ export class Game extends Scene {
     }
   }
 
-  createMorePlatforms() {
+  createMorePlatforms(): void {
     const { width } = this.scale;
-    const lastPlatform = this.platformGroup.getLast(true);
+    const lastPlatform = this.platformGroup.getLast(true) as GameObjects.Image;
 
     if (lastPlatform && lastPlatform.x < this.cameras.main.scrollX + width) {
-      const platformsCount = Phaser.Math.Between(1, 3); // Генерируем от 1 до 3 платформ
+      const platformsCount = PhaserMath.Between(1, 3); // Генерируем от 1 до 3 платформ
       let previousX = lastPlatform.x + lastPlatform.displayWidth;
 
       for (let i = 0; i < platformsCount; i++) {
-        const gap = Phaser.Math.Between(
+        const gap = PhaserMath.Between(
           CONFIG.platformSizeTexture * CONFIG.scale,
           CONFIG.platformSizeTexture * CONFIG.scale * 3
         );
         const newX = previousX + gap; // Вычисляем начальную координату X новой платформы
-        const newYDirection = Phaser.Math.Between(0, 1) === 0 ? -1 : 1; // Направление по Y: вверх или вниз
+        const newYDirection = PhaserMath.Between(0, 1) === 0 ? -1 : 1; // Направление по Y: вверх или вниз
         const newY =
-          lastPlatform.y + newYDirection * Phaser.Math.Between(20, 50); // Вычисляем новую координату Y
-        const platformLength = Phaser.Math.Between(3, 5); // Длина платформы
+          lastPlatform.y + newYDirection * PhaserMath.Between(20, 50); // Вычисляем новую координату Y
+        const platformLength = PhaserMath.Between(3, 5); // Длина платформы
 
         this.createPlatform(newX, newY, platformLength);
         previousX =
-          newX + this.platforms.getChildren()[0].displayWidth * platformLength; // Обновляем последнюю позицию X для следующей платформы
+          newX +
+          (this.platforms.getChildren()[0] as GameObjects.Image).displayWidth *
+            platformLength; // Обновляем последнюю позицию X для следующей платформы
       }
     }
   }
 
-  collectCoin(player, coin) {
+  collectCoin(
+    player: Physics.Arcade.Sprite,
+    coin: Physics.Arcade.Sprite
+  ): void {
     this.sound.play("coin");
     coin.disableBody(true, false);
     this.tweens.add({

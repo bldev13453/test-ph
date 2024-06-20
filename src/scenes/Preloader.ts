@@ -32,7 +32,7 @@ export class Preloader extends Scene {
       )
       .setOrigin(0, 0.5);
 
-    this.load.on("progress", (progress) => {
+    this.load.on("progress", (progress: number) => {
       //  Update the progress bar
       bar.width = (barWidth - 6) * progress;
     });
