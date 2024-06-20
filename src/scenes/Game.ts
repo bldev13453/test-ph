@@ -1,8 +1,8 @@
 import { Scene, Physics, GameObjects, Math as PhaserMath } from "phaser";
 
 const CONFIG = {
-  startPosition: { x: 50, y: 50 },
-  playerSpeed: 150,
+  startPosition: { x: 50, y: 300 },
+  playerSpeed: 180,
   gravityY: 500,
   jumpPower: 300,
   scale: 0.15, // Масштаб всех спрайтов в игре
@@ -26,10 +26,11 @@ export class Game extends Scene {
     const { height } = this.scale;
     this.player = this.physics.add.sprite(
       CONFIG.startPosition.x,
-      height - 300,
+      height - CONFIG.startPosition.y,
       "character_sprite"
     );
-    this.player.setScale(CONFIG.scale);
+    this.player.setOffset(0, -70);
+    this.player.setScale(0.25);
     this.player.setGravityY(CONFIG.gravityY);
     this.player.setVelocityX(CONFIG.playerSpeed);
     this.player.setDepth(10);
