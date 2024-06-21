@@ -20,6 +20,8 @@
 <script>
   window.onload = () => {
     window.Telegram.WebApp.ready();
-    window.Telegram.WebApp.expand();
+    setTimeout(() => {
+      window.Telegram.WebApp.expand();
+    }, 1000);
   };
 </script>
