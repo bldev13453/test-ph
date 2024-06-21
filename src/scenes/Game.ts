@@ -1,7 +1,7 @@
 import { Scene, Physics, GameObjects, Math as PhaserMath } from "phaser";
 
 const CONFIG = {
-  startPosition: { x: 50, y: 300 },
+  startPosition: { x: 50, y: 140 },
   playerSpeed: 180,
   gravityY: 500,
   jumpPower: 300,
@@ -11,70 +11,43 @@ const CONFIG = {
 };
 
 export class Game extends Scene {
-  private player!: Physics.Arcade.Sprite;
-  private platforms!: Physics.Arcade.StaticGroup;
-  private platformGroup!: GameObjects.Group;
-  private spikes!: Physics.Arcade.StaticGroup;
-  private positionText!: GameObjects.Text;
-  private hearts!: GameObjects.Group;
+  private player: Physics.Arcade.Sprite | undefined;
+  private platforms: Physics.Arcade.StaticGroup | undefined;
+  private platformGroup: GameObjects.Group | undefined;
+  private spikes: Physics.Arcade.StaticGroup | undefined;
+  private positionText: GameObjects.Text | undefined;
+  private hearts: GameObjects.Group | undefined;
+  private startText: GameObjects.Text | undefined;
+  private collectedCoins: number = 0;
+  private coins: GameObjects.Group | undefined;
 
   constructor() {
     super("Game");
   }
 
   create(): void {
-    const { height } = this.scale;
-    this.player = this.physics.add.sprite(
-      CONFIG.startPosition.x,
-      height - CONFIG.startPosition.y,
-      "character_sprite"
-    );
-    this.player.setOffset(0, -70);
-    this.player.setScale(0.25);
-    this.player.setGravityY(CONFIG.gravityY);
-    this.player.setVelocityX(CONFIG.playerSpeed);
-    this.player.setDepth(10);
-
-    // Анимация движения персонажа
-    this.anims.create({
-      key: "walk",
-      frames: this.anims.generateFrameNumbers("character_sprite", {
-        start: 0,
-        end: 4,
-      }),
-      frameRate: 10,
-      repeat: -1,
-    });
-    this.player.anims.play("walk");
-
-    // Платформы
-    this.platforms = this.physics.add.staticGroup();
-    this.platformGroup = this.add.group({
-      removeCallback: (platform: GameObjects.GameObject) => {
-        this.platforms.killAndHide(platform);
-      },
-    });
-    this.spikes = this.physics.add.staticGroup();
-
-    // Инициализация первой платформы
-    this.createPlatform(0, height - 50, 10); // Уточнена позиция платформы
-
-    // Коллизии
-    this.physics.add.collider(this.player, this.platforms);
-    this.physics.add.collider(this.player, this.platformGroup);
-
-    // Использование overlap вместо collider для шипов
-    this.physics.add.overlap(
-      this.player,
-      this.spikes,
-      this.hitSpike as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
-      undefined,
-      this
+    const bg = this.add.image(
+      this.screenCenterX,
+      this.screenCenterY,
+      "background"
     );
 
-    // Камера
-    this.cameras.main.startFollow(this.player);
+    const { width, height } = this.scale;
 
+    bg.setScale(Math.max(width / bg.width, height / bg.height));
+    bg.setScrollFactor(0);
+    this.initCharacter();
+    this.initPlatforms();
+    this.initPhysics();
+    this.showStartText();
+    this.input.on("pointerdown", this.handleClick, this);
+    // this.start();
+  }
+
+  start(): void {
+    this.setFullHP();
+    this.player?.anims.play("walk");
+    this.player?.setVelocityX(CONFIG.playerSpeed);
     // Создание новых платформ
     this.time.addEvent({
       delay: 500,
@@ -82,6 +55,57 @@ export class Game extends Scene {
       callbackScope: this,
       loop: true,
     });
+  }
+
+  /**
+   * Инициализация игрока
+   */
+  initCharacter(): void {
+    const { height } = this.scale;
+    this.player = this.physics.add.sprite(
+      CONFIG.startPosition.x,
+      height - CONFIG.startPosition.y,
+      "character_walk_sprite"
+    );
+    this.player.setOffset(0, -40);
+    this.player.setScale(0.23);
+    this.player.setGravityY(CONFIG.gravityY);
+    this.player.setDepth(10);
+
+    // Анимация движения персонажа
+    if (!this.anims.exists("walk")) {
+      this.anims.create({
+        key: "walk",
+        frames: this.anims.generateFrameNumbers("character_walk_sprite", {
+          start: 0,
+          end: 4,
+        }),
+        frameRate: 10,
+        repeat: -1,
+      });
+    }
+    // Анимация прыжка персонажа
+    if (!this.anims.exists("jump")) {
+      this.anims.create({
+        key: "jump",
+        frames: this.anims.generateFrameNumbers("character_jump_sprite", {
+          start: 0,
+          end: 3,
+        }),
+        frameRate: 10,
+        repeat: -1,
+      });
+    }
+
+    // Камера
+    this.cameras.main.startFollow(
+      this.player,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      height / 5
+    );
 
     // Текст позиции игрока
     this.positionText = this.add.text(10, 50, "X: 0", {
@@ -92,46 +116,127 @@ export class Game extends Scene {
     this.hearts = this.add.group({
       key: "heart",
       repeat: 2,
-      setXY: { x: 30, y: 30, stepX: 20 },
+      setXY: { x: 30, y: 30, stepX: 25 },
     });
-    this.hearts.getChildren().forEach((heart: GameObjects.GameObject) => {
+  }
+
+  /**
+   * Инициализация платформ
+   */
+  initPlatforms(): void {
+    const { height, width } = this.scale;
+    this.platforms = this.physics.add.staticGroup();
+    this.platformGroup = this.add.group({
+      removeCallback: (platform: GameObjects.GameObject) => {
+        this.platforms?.killAndHide(platform);
+      },
+    });
+    this.spikes = this.physics.add.staticGroup();
+    // Инициализация первой платформы
+    this.createPlatform(-width, height - 50, width * 0.05); // Уточнена позиция платформы
+  }
+
+  setFullHP(): void {
+    this.hearts?.getChildren().forEach((heart: GameObjects.GameObject) => {
       (heart as GameObjects.Image).setScrollFactor(0).setScale(0.3);
     });
   }
 
+  initPhysics(): void {
+    if (
+      !this.player ||
+      !this.spikes ||
+      !this.platforms ||
+      !this.platformGroup
+    ) {
+      return;
+    }
+
+    // Использование overlap вместо collider для шипов
+    this.physics.add.overlap(
+      this.player,
+      this.spikes,
+      this.hitSpike as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
+      undefined,
+      this
+    );
+
+    // Коллизии
+    this.physics.add.collider(this.player, this.platforms);
+    this.physics.add.collider(this.player, this.platformGroup);
+  }
+
   update(): void {
     this.platformGroup
-      .getChildren()
+      ?.getChildren()
       .forEach((platform: GameObjects.GameObject) => {
         if (
           (platform as GameObjects.Image).x <
           this.cameras.main.scrollX -
             (platform as GameObjects.Image).displayWidth
         ) {
-          this.platformGroup.killAndHide(platform);
-          this.platformGroup.remove(platform);
+          this.platformGroup?.killAndHide(platform);
+          this.platformGroup?.remove(platform);
         }
       });
-
-    if (this.input.activePointer.isDown) {
-      this.jump();
-    }
-
-    this.positionText.setText(`X: ${Math.floor(this.player.x)}`);
-    this.positionText.setScrollFactor(0);
+    this.positionText?.setText(`X: ${Math.floor(this.playerX)}`);
+    this.positionText?.setScrollFactor(0);
 
     // get Y position for the last platform
-    const lastPlatform = this.platformGroup.getLast(true);
+    const lastPlatform = this.platformGroup?.getLast(true);
+
     const lastPlatformY = lastPlatform
       ? (lastPlatform as GameObjects.Image).y
       : 0;
-    if (this.player.y > lastPlatformY + 500) {
-      this.scene.start("GameOver");
+    if (this.playerY > lastPlatformY + 500) {
+      this.restartScene();
+    }
+    this.updateAnimations();
+  }
+
+  restartScene(): void {
+    this.scene.restart();
+  }
+  updateAnimations(): void {
+    if (this.startText?.active) return;
+
+    const isGettingUp = this.player!.body!.deltaY() < -0.2;
+    const isGettingDown = this.player!.body!.deltaY() > 0.2;
+    const isJumping = isGettingUp || isGettingDown;
+
+    if (isJumping) {
+      if (this.player?.anims.currentAnim?.key !== "jump") {
+        this.player?.anims.play("jump");
+      }
+      if (isGettingUp) {
+        this.player?.setTexture("character_jump_sprite", 1);
+      }
+      if (isGettingDown) {
+        this.player?.setTexture("character_jump_sprite", 2);
+      }
+    }
+    if (!isJumping && this.player?.anims.currentAnim?.key !== "walk") {
+      this.player?.setTexture("character_walk_sprite", 1);
+      this.player?.anims.play("walk");
+    }
+  }
+
+  handleClick(): void {
+    // console.log(event);
+    /**
+     * TODO если startText активен, то проверять область тапа, если она принадлежит области с кнопками
+     * то ничего не делать
+     */
+    if (this.startText?.active) {
+      this.startText.destroy();
+      this.start();
+    } else {
+      this.jump();
     }
   }
 
   jump(): void {
-    if (this.player.body?.touching.down) {
+    if (this.player?.body?.touching.down) {
       this.player.setVelocityY(-CONFIG.jumpPower);
     }
   }
@@ -139,7 +244,7 @@ export class Game extends Scene {
   createPlatform(x: number, y: number, platformLength = 3): void {
     let lastX = x;
     for (let i = 0; i < platformLength; i++) {
-      const block = this.platforms.create(lastX, y, "platform");
+      const block = this.platforms?.create(lastX, y, "platform");
       block.setOrigin(0, 1);
       block.setScale(CONFIG.scale);
       block.refreshBody();
@@ -147,11 +252,10 @@ export class Game extends Scene {
       block.body.checkCollision.down = false;
       block.body.checkCollision.left = false;
       block.body.checkCollision.right = false;
-      this.platformGroup.add(block); // Добавляем блок в группу
+      this.platformGroup?.add(block); // Добавляем блок в группу
       block.setDepth(1);
       lastX += block.displayWidth;
-      console.log(this.player.x, CONFIG.startGenerateItemsCoordinateX);
-      if (this.player.x > CONFIG.startGenerateItemsCoordinateX) {
+      if (this.player && this.playerX > CONFIG.startGenerateItemsCoordinateX) {
         if (PhaserMath.Between(0, 1) === 1) {
           // 50% вероятность
           const coin = this.physics.add.sprite(
@@ -182,7 +286,11 @@ export class Game extends Scene {
 
   createSpikes(x: number, y: number, count: number): void {
     for (let i = 0; i < count; i++) {
-      const spike = this.spikes.create(x + i * (64 * CONFIG.scale), y, "spike");
+      const spike = this.spikes?.create(
+        x + i * (64 * CONFIG.scale),
+        y,
+        "spike"
+      );
       spike.setOrigin(0, 1);
       spike.setScale(CONFIG.scale);
       spike.refreshBody();
@@ -190,34 +298,37 @@ export class Game extends Scene {
   }
 
   hitSpike(player: Physics.Arcade.Sprite, spike: Physics.Arcade.Sprite): void {
-    this.player.setTint(0xff0000);
+    player?.setTint(0xff0000);
     this.time.addEvent({
       delay: 200,
       callback: () => {
-        this.player.clearTint();
+        player?.clearTint();
       },
       callbackScope: this,
     });
 
-    // Уменьшаем количество сердец
-    const heart = this.hearts.getFirstAlive() as GameObjects.Image;
-    if (heart) {
-      this.tweens.add({
-        targets: heart,
-        y: heart.y - 50,
-        alpha: 0,
-        ease: "Power1",
-        duration: 300,
-        onComplete: () => {
-          heart.destroy();
-        },
-      });
+    const heart = this.hearts?.getFirstAlive();
+    if (!heart) {
+      this.restartScene();
+      return;
     }
+
+    // Уменьшаем количество сердец
+    this.tweens.add({
+      targets: heart,
+      y: heart.y - 50,
+      alpha: 0,
+      ease: "Power1",
+      duration: 300,
+      onComplete: () => {
+        heart.destroy();
+      },
+    });
   }
 
   createMorePlatforms(): void {
     const { width } = this.scale;
-    const lastPlatform = this.platformGroup.getLast(true) as GameObjects.Image;
+    const lastPlatform = this.platformGroup?.getLast(true) as GameObjects.Image;
 
     if (lastPlatform && lastPlatform.x < this.cameras.main.scrollX + width) {
       const platformsCount = PhaserMath.Between(1, 3); // Генерируем от 1 до 3 платформ
@@ -237,7 +348,7 @@ export class Game extends Scene {
         this.createPlatform(newX, newY, platformLength);
         previousX =
           newX +
-          (this.platforms.getChildren()[0] as GameObjects.Image).displayWidth *
+          (this.platforms?.getChildren()[0] as GameObjects.Image).displayWidth *
             platformLength; // Обновляем последнюю позицию X для следующей платформы
       }
     }
@@ -257,7 +368,31 @@ export class Game extends Scene {
       duration: 800,
       onComplete: () => {
         coin.destroy();
+        this.collectedCoins += 1;
       },
     });
+  }
+  showStartText(): void {
+    this.startText = this.add
+      .text(this.screenCenterX, this.screenCenterY, "tap to start", {
+        fontSize: "32px",
+      })
+      .setOrigin(0.5);
+    this.startText.setScrollFactor(0);
+  }
+
+  get screenCenterX(): number {
+    return this.cameras.main.worldView.x + this.cameras.main.width / 2;
+  }
+  get screenCenterY(): number {
+    return this.cameras.main.worldView.y + this.cameras.main.height / 2;
+  }
+
+  get playerX(): number {
+    return this.player?.x || 0;
+  }
+
+  get playerY(): number {
+    return this.player?.y || 0;
   }
 }
