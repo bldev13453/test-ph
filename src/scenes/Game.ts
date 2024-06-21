@@ -1,4 +1,9 @@
 import { Scene, Physics, GameObjects, Math as PhaserMath } from "phaser";
+declare global {
+  interface Window {
+    Telegram: any;
+  }
+}
 
 const CONFIG = {
   startPosition: { x: 50, y: 140 },
@@ -26,6 +31,9 @@ export class Game extends Scene {
   }
 
   create(): void {
+    if (!window.Telegram.WebApp.isExpanded) {
+      window.Telegram.WebApp.expand();
+    }
     const bg = this.add.image(
       this.screenCenterX,
       this.screenCenterY,
