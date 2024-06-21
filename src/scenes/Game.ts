@@ -32,6 +32,7 @@ export class Game extends Scene {
 
   create(): void {
     if (!window.Telegram.WebApp.isExpanded) {
+      window.Telegram.WebApp.ready();
       window.Telegram.WebApp.expand();
     }
     const bg = this.add.image(
