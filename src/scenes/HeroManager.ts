@@ -9,10 +9,10 @@ export class HeroManager {
     this.hero = this.scene.physics.add.sprite(
       CONFIG.startPosition.x,
       this.scene.scale.height - CONFIG.startPosition.y,
-      "character_walk_sprite"
+      "hero_walk_sprite"
     );
     this.hero.setOffset(0, -40);
-    this.hero.setScale(0.23);
+    this.hero.setScale(0.21);
     this.hero.setGravityY(CONFIG.gravityY);
     this.hero.setDepth(10);
 
@@ -43,7 +43,7 @@ export class HeroManager {
     if (!this.scene.anims.exists("walk")) {
       this.scene.anims.create({
         key: "walk",
-        frames: this.scene.anims.generateFrameNumbers("character_walk_sprite", {
+        frames: this.scene.anims.generateFrameNumbers("hero_walk_sprite", {
           start: 0,
           end: 4,
         }),
@@ -56,7 +56,7 @@ export class HeroManager {
     if (!this.scene.anims.exists("jump")) {
       this.scene.anims.create({
         key: "jump",
-        frames: this.scene.anims.generateFrameNumbers("character_jump_sprite", {
+        frames: this.scene.anims.generateFrameNumbers("hero_jump_sprite", {
           start: 0,
           end: 3,
         }),
@@ -88,13 +88,13 @@ export class HeroManager {
         this.hero.anims.play("jump");
       }
       if (isGettingUp) {
-        this.hero.setTexture("character_jump_sprite", 1);
+        this.hero.setTexture("hero_jump_sprite", 1);
       }
       if (isGettingDown) {
-        this.hero.setTexture("character_jump_sprite", 2);
+        this.hero.setTexture("hero_jump_sprite", 2);
       }
     } else if (this.hero.anims.currentAnim?.key !== "walk") {
-      this.hero.setTexture("character_walk_sprite", 1);
+      this.hero.setTexture("hero_walk_sprite", 1);
       this.hero.anims.play("walk");
     }
   }
