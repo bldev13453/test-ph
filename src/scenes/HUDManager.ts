@@ -1,13 +1,13 @@
 import { GameObjects } from "phaser";
 import { Game } from "./Game";
 
-const COINS_TEXT_POSITION = {
+const COINS_COUNTER_POSITION = {
   icon: {
-    x: 200,
+    x: 30,
     y: 30,
   },
   text: {
-    x: 250,
+    x: 70,
     y: 30,
   },
 };
@@ -30,17 +30,20 @@ export class HUDManager {
   private showCoins(): void {
     this.coins = this.scene.add.group({
       key: "coin",
-      setXY: { x: COINS_TEXT_POSITION.icon.x, y: COINS_TEXT_POSITION.icon.y },
+      setXY: {
+        x: COINS_COUNTER_POSITION.icon.x,
+        y: this.scene.scale.height - 25,
+      },
     });
     this.coins.getChildren().forEach((coin: GameObjects.GameObject) => {
-      (coin as GameObjects.Image).setScrollFactor(0).setScale(0.3);
+      (coin as GameObjects.Image).setScrollFactor(0).setScale(0.4);
     });
     this.coinsCountText = this.scene.add.text(
-      COINS_TEXT_POSITION.text.x,
-      COINS_TEXT_POSITION.text.y,
-      "0",
+      COINS_COUNTER_POSITION.text.x,
+      this.scene.scale.height - 25,
+      "x 0",
       {
-        fontSize: "32px",
+        fontSize: "24px",
       }
     );
     this.coinsCountText.setOrigin(0.5);
@@ -64,7 +67,7 @@ export class HUDManager {
   }
 
   public updateCoinsCount(count: number): void {
-    this.coinsCountText.setText(": " + count.toString());
+    this.coinsCountText.setText("x" + count.toString());
   }
 
   public updateHeroPosition(x: number): void {
