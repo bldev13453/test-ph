@@ -14,35 +14,29 @@ export class Boosts extends Scene {
   private gameBoosts = [
     {
       name: "HP",
-      icon: "heart",
+      icon: "card-doge",
       price: 1,
+      level: 1,
     },
     {
-      name: "HP",
-      icon: "heart",
+      name: "Magnet",
+      icon: "card-doge",
       price: 1,
-    },
-    {
-      name: "HP",
-      icon: "heart",
-      price: 1,
-    },
-    {
-      name: "HP",
-      icon: "heart",
-      price: 1,
+      level: 1,
     },
   ];
   private memeBoosts = [
     {
       name: "Shield",
-      icon: "heart",
+      icon: "card-doge",
       price: 1,
+      level: 1,
     },
     {
       name: "Jump",
-      icon: "heart",
+      icon: "card-doge",
       price: 1,
+      level: 1,
     },
   ];
 
@@ -83,7 +77,7 @@ export class Boosts extends Scene {
 
   private createBackButton(): void {
     this.backButton = this.add
-      .image(60, this.cameras.main.height - 30, "back-button")
+      .image(75, this.cameras.main.height - 30, "back-button")
       .setScale(0.12)
       .setDepth(5)
       .setInteractive()
@@ -95,7 +89,7 @@ export class Boosts extends Scene {
   private createBoostsButtons(): void {
     const { width } = this.scale;
 
-    this.boostsButtonsContainer = this.add.container(width / 2, 100);
+    this.boostsButtonsContainer = this.add.container(width / 2, 80);
     this.gameBoostsButton = this.add
       .image(0, 0, "game-boosts-button-hover")
       .setScale(0.2)
@@ -134,162 +128,161 @@ export class Boosts extends Scene {
     this.currentBoosts = screen === "game" ? this.gameBoosts : this.memeBoosts;
     this.createCards();
   }
-
   private createCards() {
     if (this.cardsContainer) {
       this.cardsContainer.destroy();
     }
     this.cardsContainer = this.add.container(0, 0);
-    // Grid configuration
-    // Calculate rows and cols depend on the number of current boosts
-    const rows = Math.ceil(this.currentBoosts.length / 2);
+    const screenWidth = this.cameras.main.width;
+    const screenHeight = this.cameras.main.height;
+
+    const margin = 10;
+    const spacingX = 50;
+    const spacingY = 80;
+    const containerHeight = 40;
+    const containerMarginTop = 20;
+
+    const rows = 2;
     const cols = 2;
 
-    const spacingX = 20;
-    const spacingY = 20;
+    // Available space for cards
+    const availableWidth = screenWidth - 2 * margin - (cols - 1) * spacingX;
+    const availableHeight =
+      screenHeight -
+      margin -
+      (rows - 1) * spacingY -
+      containerHeight -
+      containerMarginTop -
+      160; // Considering some top space
 
-    const cardWidth = (this.cameras.main.width - (cols + 1) * spacingX) / cols;
-    const cardHeight = cardWidth * 1.25; // Adjusted height to make cards smaller
+    // Card original dimensions (update these to the actual dimensions if known)
+    const originalCardWidth = 220;
+    const originalCardHeight = 310;
+    const cardRatio = originalCardWidth / originalCardHeight;
 
-    // Calculate starting positions to center the grid
-    const startX =
-      (this.cameras.main.width - (cols * (cardWidth + spacingX) - spacingX)) /
-      2;
-    const startY = 150; // Start below the `boostsButtonsContainer`
+    // Calculate card dimensions to fit within the available space while maintaining aspect ratio
+    const maxCardWidth = availableWidth / cols;
+    const maxCardHeight = availableHeight / rows;
+
+    let cardWidth = maxCardWidth;
+    let cardHeight = maxCardHeight;
+
+    if (maxCardWidth / cardRatio < maxCardHeight) {
+      cardHeight = maxCardWidth / cardRatio;
+    } else {
+      cardWidth = maxCardHeight * cardRatio;
+    }
+
+    const totalUsedWidth = cardWidth * cols + (cols - 1) * spacingX;
+
+    const startX = (screenWidth - totalUsedWidth) / 2;
+    const startY = 110; // Adjust to center vertically
 
     for (let row = 0; row < rows; row++) {
       for (let col = 0; col < cols; col++) {
         const x = startX + col * (cardWidth + spacingX);
         const y = startY + row * (cardHeight + spacingY);
+        const cardContainer = this.add.container(x, y);
+        const boostItem = this.currentBoosts[row * 2 + col];
+        if (!boostItem) continue;
+        const cardImage = this.add
+          .image(0, 0, boostItem.icon)
+          .setDisplaySize(cardWidth, cardHeight)
+          .setOrigin(0, 0);
 
-        // Draw the card
-        const card = this.add.graphics();
-        card.fillStyle(0xffffff, 1);
-        card.fillRoundedRect(x, y, cardWidth, cardHeight, 20);
-        card.lineStyle(2, 0x000000, 1);
-        card.strokeRoundedRect(x, y, cardWidth, cardHeight, 20);
+        cardContainer.add(cardImage); // Add the card image to the container
 
-        // Add top rectangle
-        card.fillStyle(0x87ceeb, 1);
-        card.fillRoundedRect(x + 10, y + 10, cardWidth - 20, 50, 10);
-        card.lineStyle(2, 0x000000, 1);
-        card.strokeRoundedRect(x + 10, y + 10, cardWidth - 20, 50, 10);
-
-        // Add booster name to the top rectangle
-        const name = this.add
-          .text(
-            x + cardWidth / 2,
-            y + 35,
-            this.currentBoosts[row * 2 + col].name,
-            {
-              fontSize: "20px",
-              color: "#000",
-              fontFamily: '"Press Start 2P"',
-            }
-          )
-          .setOrigin(0.5);
-
-        // Add heart icon in the middle of the card
-        const heart = this.add
-          .image(x + cardWidth / 2, y + cardHeight / 2, "heart")
-          .setScale(0.45);
-        heart.setOrigin(0.5);
-
-        // Adding bottom rectangle
-        card.fillStyle(0x87ceeb, 1);
-        card.fillRoundedRect(
-          x + 10,
-          y + cardHeight - 60,
-          cardWidth - 20,
-          50,
-          10
-        );
-        card.lineStyle(2, 0x000000, 1);
-        card.strokeRoundedRect(
-          x + 10,
-          y + cardHeight - 60,
-          cardWidth - 20,
-          50,
-          10
+        // Create container for price and coin
+        const priceContainer = this.add.container(
+          0,
+          cardHeight + containerMarginTop - 10
         );
 
-        // Add coin icon and price
-        const priceText = "1"; // Replace with the actual price
+        const borderGraphics = this.add.graphics();
+        borderGraphics.lineStyle(3, 0x000000, 1);
+        borderGraphics.strokeRoundedRect(0, 0, cardWidth, containerHeight, 8);
+
+        const priceText = boostItem.price.toString();
         const priceStyle = { fontSize: "24px", color: "#000" };
         const price = this.add.text(0, 0, priceText, priceStyle);
 
-        // Calculate the total width of the coin icon and price text
-        const coin = this.add.image(0, 0, "coin").setScale(0.5);
+        const coin = this.add.image(0, 0, "coin").setScale(0.4);
         const coinWidth = coin.displayWidth;
         const priceWidth = price.width;
-        const totalWidth = coinWidth + priceWidth + 10; // 10px padding between coin and price
+        const totalWidth = coinWidth + priceWidth;
 
-        // Set positions to center them at the bottom of the card
-        coin.setPosition(
-          x + cardWidth / 2 - totalWidth / 2 + coinWidth / 2,
-          y + cardHeight - 35
-        );
-        price.setPosition(
-          x + cardWidth / 2 - totalWidth / 2 + coinWidth + 10,
-          y + cardHeight - 45
-        );
-        // Add an invisible interactive rectangle for the lower section
-        const lowerSection = this.add.rectangle(
-          x + cardWidth / 2,
-          y + cardHeight - 35,
-          cardWidth - 20,
-          50,
-          0x000000,
-          0
-        );
-        lowerSection
+        coin.setPosition(cardWidth / 2 - totalWidth / 2 + coinWidth / 2, 20); // Adjusted y to better center it inside container
+        price.setPosition(cardWidth / 2 - totalWidth / 2 + coinWidth + 5, 7);
+
+        priceContainer.add(borderGraphics);
+        priceContainer.add(coin);
+        priceContainer.add(price);
+
+        const updatePricePosition = () => {
+          const coinWidth = coin.displayWidth;
+          const priceWidth = price.width;
+          const totalWidth = coinWidth + priceWidth;
+          coin.setPosition(cardWidth / 2 - totalWidth / 2 + coinWidth / 2, 20);
+          price.setPosition(cardWidth / 2 - totalWidth / 2 + coinWidth + 5, 7); // 5px padding between coin and price
+        };
+
+        // Add interactive rectangle for priceContainer
+        const priceInteractiveRect = this.add
+          .rectangle(
+            cardWidth / 2,
+            containerHeight / 2,
+            cardWidth,
+            containerHeight,
+            0xffffff,
+            0
+          )
           .setInteractive({ useHandCursor: true })
           .on("pointerdown", () => {
-            this.payForBoost("boosts");
+            this.payForBoost(boostItem.name);
+            price.setText(boostItem.price.toString());
+            level.setText(boostItem.level.toString());
+            updatePricePosition();
           })
           .on("pointerover", () => {
-            card.fillStyle(0xff69b4, 0.7); // Change to pink with 30% opacity on hover
-            card.fillRoundedRect(
-              x + 10,
-              y + cardHeight - 60,
-              cardWidth - 20,
-              50,
-              10
-            );
-            card.lineStyle(2, 0x000000, 1);
-            card.strokeRoundedRect(
-              x + 10,
-              y + cardHeight - 60,
-              cardWidth - 20,
-              50,
-              10
-            );
+            priceInteractiveRect.fillAlpha = 0.2;
           })
           .on("pointerout", () => {
-            card.fillStyle(0x87ceeb, 1);
-            card.fillRoundedRect(
-              x + 10,
-              y + cardHeight - 60,
-              cardWidth - 20,
-              50,
-              10
-            );
-            card.lineStyle(2, 0x000000, 1);
-            card.strokeRoundedRect(
-              x + 10,
-              y + cardHeight - 60,
-              cardWidth - 20,
-              50,
-              10
-            );
+            priceInteractiveRect.fillAlpha = 0;
           });
-        this.cardsContainer.add(card);
-        this.cardsContainer.add(heart);
-        this.cardsContainer.add(lowerSection);
-        this.cardsContainer.add(price);
-        this.cardsContainer.add(coin);
-        this.cardsContainer.add(price);
-        this.cardsContainer.add(name);
+
+        priceContainer.add(priceInteractiveRect);
+
+        // Add price and coin icon
+        const levelText = boostItem.level.toString();
+        const levelTextStyle = { fontSize: "24px", color: "#fff" };
+        const level = this.add.text(0, 0, levelText, levelTextStyle);
+
+        level.setPosition(
+          cardImage.displayWidth * 0.14,
+          cardImage.displayHeight * 0.81
+        );
+
+        cardContainer.add(level);
+
+        const descriptionText = "5 seconds";
+        const descriptionTextStyle = {
+          fontSize: "14px",
+          color: "#fff",
+          fontStyle: "normal",
+          fontFamily: '"Arial"',
+        };
+
+        const description = this.add
+          .text(0, 0, descriptionText, descriptionTextStyle)
+          .setOrigin(0.5, 0.5);
+        description.setPosition(
+          cardImage.displayWidth * 0.64,
+          cardImage.displayHeight * 0.87
+        );
+        cardContainer.add(description);
+
+        cardContainer.add(priceContainer);
+        this.cardsContainer.add(cardContainer);
       }
     }
   }
@@ -317,11 +310,20 @@ export class Boosts extends Scene {
     this.recalculateCoinPosition();
   }
 
-  private payForBoost(booster: string): void {
+  private payForBoost(boosterName: string): void {
     if (this.coinsCount < 1) {
       return;
     }
-    this.appState.setProp("coins", this.coinsCount - 1);
+    const booster = this.currentBoosts.find(
+      (item) => item.name === boosterName
+    );
+
+    if (!booster) return;
+    if (booster.price > this.coinsCount) return;
+
+    this.appState.setProp("coins", this.coinsCount - booster.price);
+    booster.level++;
+    booster.price = booster.price * 2;
     this.updateCoinsDisplay();
   }
 }

@@ -4,7 +4,7 @@ export const getState = (): Promise<State> => {
   return new Promise<State>((resolve) => {
     setTimeout(() => {
       resolve({
-        coins: 100,
+        coins: 1000,
         lives: 3,
         globalGoal: 35, // percentage
         gameBoosters: {

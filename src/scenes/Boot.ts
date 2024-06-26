@@ -18,7 +18,8 @@ export class Boot extends Scene {
     this.load.image("pause-button", "assets/pause-button.png");
     this.load.image("settings-button", "assets/settings-button.png");
     this.load.image("back-button", "assets/back-button.png");
-
+    this.load.image("card-base", "assets/card-base.png");
+    this.load.image("card-doge", "assets/card-doge.png");
     this.load.image("game-boosts-button", "assets/gameBoosts-button.png");
     this.load.image(
       "game-boosts-button-hover",
@@ -59,6 +60,7 @@ export class Boot extends Scene {
     });
 
     await appState.initState();
-    this.scene.launch("Preloader").launch("Game").launch("HUD");
+    this.scene.launch("Preloader").launch("Boosts");
+    // .launch("Game").launch("HUD");
   }
 }
