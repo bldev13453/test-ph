@@ -69,10 +69,6 @@ export class Boot extends Scene {
     });
 
     await appState.initState();
-    this.scene
-      .launch("Preloader")
-      // .launch("Boosts");
-      .launch("Game")
-      .launch("HUD");
+    this.scene.launch("Preloader").launch("Game").launch("HUD");
   }
 }
