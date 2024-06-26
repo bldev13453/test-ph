@@ -1,20 +1,22 @@
 import { Physics } from "phaser";
 import { CONFIG } from "./config";
 import { Game } from "./Game";
+import { EVENTS } from "./events";
 
 export class HeroManager {
   private hero: Physics.Arcade.Sprite;
   private hp: number;
   constructor(private scene: Game) {
-    this.hero = this.scene.physics.add.sprite(
-      CONFIG.startPosition.x,
-      this.scene.scale.height - CONFIG.startPosition.y,
-      "hero_walk_sprite"
-    );
-    this.hero.setOffset(0, -40);
-    this.hero.setScale(0.21);
-    this.hero.setGravityY(CONFIG.gravityY);
-    this.hero.setDepth(10);
+    this.hero = this.scene.physics.add
+      .sprite(
+        CONFIG.startPosition.x,
+        this.scene.scale.height - CONFIG.startPosition.y,
+        "hero_walk_sprite"
+      )
+      .setOffset(0, -40)
+      .setScale(0.21)
+      .setGravityY(CONFIG.gravityY)
+      .setDepth(2);
 
     this.initAnimations();
     this.scene.cameras.main.startFollow(
@@ -27,7 +29,13 @@ export class HeroManager {
     );
 
     this.hp = this.scene.registry.get("hp") || 3;
-    this.scene.hudManager.setHpIcons(this.hp);
+    this.scene.eventBus.on(EVENTS.HIT, () => {
+      this.setHp(this.hp - 1);
+    });
+    this.scene.eventBus.on(EVENTS.FALL, () => {
+      this.setHp(this.hp - 1);
+    });
+    // this.scene.hudManager.setHpIcons(this.hp);
   }
   resetPosition(): void {
     this.hero.setPosition(
@@ -73,6 +81,7 @@ export class HeroManager {
 
   public jump(): void {
     if (this.hero.body?.touching.down) {
+      this.scene.sound.play("jump");
       this.hero.setVelocityY(-CONFIG.jumpPower);
     }
   }
@@ -100,18 +109,13 @@ export class HeroManager {
   }
   hit() {
     this.setHp(this.currentHp - 1);
-    this.scene.restartScene();
   }
   private setHp = (hp: number): void => {
-    if (this.hp > hp) {
-      this.scene.hudManager.decreaseHearts();
-    }
     if (hp === 0) {
       this.hp = 3;
     } else {
       this.hp = hp;
     }
-    this.scene.registry.set("hp", this.hp);
   };
 
   get currentHp(): number {

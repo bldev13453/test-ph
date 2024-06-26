@@ -1,11 +1,13 @@
 import { Physics, GameObjects, Math as PhaserMath } from "phaser";
 import { CONFIG } from "./config";
 import { Game } from "./Game";
+import { EVENTS } from "./events";
 
 export class PlatformManager {
   private platforms: Physics.Arcade.StaticGroup;
   private platformGroup: GameObjects.Group;
   private spikes: Physics.Arcade.StaticGroup;
+  private isHeroDamaged: boolean;
 
   constructor(private scene: Game) {
     const { height, width } = this.scene.scale;
@@ -16,6 +18,8 @@ export class PlatformManager {
       },
     });
     this.spikes = this.scene.physics.add.staticGroup();
+    this.isHeroDamaged = false;
+
     this.createPlatform(-width, height - 50, width * 0.05);
 
     this.scene.physics.add.collider(
@@ -31,7 +35,7 @@ export class PlatformManager {
     );
   }
 
-  public createPlatform(x: number, y: number, platformLength = 3): void {
+  public createPlatform(x: number, y: number, platformLength = 4): void {
     let lastX = x;
     for (let i = 0; i < platformLength; i++) {
       const block = this.platforms.create(lastX, y, "platform");
@@ -55,7 +59,7 @@ export class PlatformManager {
             lastX - block.displayWidth / 2,
             y - 50
           );
-        } else if (PhaserMath.Between(0, 9) < 1) {
+        } else if (PhaserMath.Between(0, 8) === 1 && platformLength > 4) {
           this.createSpikes(
             lastX - block.displayWidth,
             y - block.displayHeight,
@@ -67,27 +71,35 @@ export class PlatformManager {
   }
 
   public createSpikes(x: number, y: number, count: number): void {
-    const spike = this.spikes.create(x + 0 * (64 * CONFIG.scale), y, "spike");
-    // const img = this.spike
-    spike.setOrigin(0, 1);
-    spike.setScale(CONFIG.scale);
-    spike.refreshBody();
+    for (let i = 0; i < count; i++) {
+      this.spikes
+        .create(x + i * (64 * CONFIG.scale), y, "spike")
+        .setDepth(2)
+        .setOrigin(0, 1)
+        .setScale(CONFIG.scale)
+        .refreshBody();
+    }
   }
+
   private hitSpike(
     hero: Physics.Arcade.Sprite,
     spike: Physics.Arcade.Sprite
   ): void {
-    hero.setTint(0xff0000);
-    this.scene.time.addEvent({
-      delay: 200,
-      callback: () => {
-        hero.clearTint();
-      },
-      callbackScope: this,
-    });
-
-    this.scene.heroManager.hit();
+    if (!this.isHeroDamaged) {
+      // Check if the hero has already been damaged
+      this.isHeroDamaged = true; // Set the flag
+      hero.setTint(0xff0000);
+      this.scene.time.addEvent({
+        delay: 200,
+        callback: () => {
+          hero.clearTint();
+        },
+        callbackScope: this,
+      });
+      this.scene.eventBus.emit(EVENTS.HIT);
+    }
   }
+
   public update(): void {
     this.platformGroup
       .getChildren()
@@ -106,8 +118,12 @@ export class PlatformManager {
 
     const lastPlatformY = lastPlatform ? lastPlatform.y : 0;
     if (this.scene.heroManager.sprite.y > lastPlatformY + 500) {
-      this.scene.heroManager.hit();
+      this.handleFall();
     }
+  }
+
+  private handleFall(): void {
+    this.scene.eventBus.emit(EVENTS.FALL);
   }
 
   public createMorePlatforms(): void {
@@ -129,8 +145,8 @@ export class PlatformManager {
         const newX = previousX + gap;
         const newYDirection = PhaserMath.Between(0, 1) === 0 ? -1 : 1;
         const newY =
-          lastPlatform.y + newYDirection * PhaserMath.Between(20, 50);
-        const platformLength = PhaserMath.Between(3, 5);
+          lastPlatform.y + newYDirection * PhaserMath.Between(20, 40);
+        const platformLength = PhaserMath.Between(4, 6);
 
         this.createPlatform(newX, newY, platformLength);
         previousX =

@@ -15,3 +15,11 @@ body {
   justify-content: center;
   align-items: center;
 }
+
+@font-face {
+  font-family: "Press Start 2P";
+  font-weight: 400;
+  font-style: normal;
+  src: url("./font/PressStart2P-Regular.ttf") format("truetype");
+  font-display: swap;
+}

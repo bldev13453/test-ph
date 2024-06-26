@@ -1,60 +1,90 @@
-import { GameObjects } from "phaser";
-import { Game } from "./Game";
+import { GameObjects, Scene, Events } from "phaser";
+import { EventBus } from "./EventBus";
+import { EVENTS } from "./events";
+import { IAppState } from "./State";
 
-const COINS_COUNTER_POSITION = {
-  icon: {
-    x: 30,
-    y: 30,
-  },
-  text: {
-    x: 70,
-    y: 30,
-  },
-};
-export class HUDManager {
+// https://www.youtube.com/watch?v=G3GrBuTFJbI&t=1s
+export class HUDManager extends Scene {
   private hearts: GameObjects.Group;
-  private positionText: GameObjects.Text;
   public startText: GameObjects.Text;
-  private coins: GameObjects.Group;
+  private coinIcon: GameObjects.Image;
   private coinsCountText: GameObjects.Text;
-  constructor(readonly scene: Game) {}
+  private pauseText: GameObjects.Text;
+  private pauseButton: GameObjects.Image;
+  private boostsButton: GameObjects.Image;
+  private friendsButton: GameObjects.Image;
+  private eventBus: Events.EventEmitter;
+  constructor(private readonly appState: IAppState) {
+    super("HUD");
+    this.eventBus = EventBus;
+  }
+  create(): void {
+    this.scene.bringToTop();
 
-  init() {
-    this.positionText = this.scene.add.text(10, 50, "X: 0", {
-      font: "16px Arial",
-    });
-    this.showCoins();
+    this.displayCoins();
     this.showHearts();
+    this.showStartText();
+    this.showBoostsButton();
+    this.eventBus.on(EVENTS.START_GAME, () => {
+      this.hideStartText();
+      this.showPauseButton();
+      this.hideBoostsButton();
+    });
+    this.eventBus.on(EVENTS.HIT, () => {
+      this.handleDeath();
+    });
+    this.eventBus.on(EVENTS.FALL, () => {
+      this.handleDeath();
+    });
+    this.eventBus.on(EVENTS.COIN_COLLECTED, (count: number) => {
+      this.updateCoinsCount(count);
+    });
   }
 
-  private showCoins(): void {
-    this.coins = this.scene.add.group({
-      key: "coin",
-      setXY: {
-        x: COINS_COUNTER_POSITION.icon.x,
-        y: this.scene.scale.height - 25,
-      },
-    });
-    this.coins.getChildren().forEach((coin: GameObjects.GameObject) => {
-      (coin as GameObjects.Image).setScrollFactor(0).setScale(0.4);
-    });
-    this.coinsCountText = this.scene.add.text(
-      COINS_COUNTER_POSITION.text.x,
-      this.scene.scale.height - 25,
-      "x 0",
-      {
-        fontSize: "24px",
-      }
-    );
-    this.coinsCountText.setOrigin(0.5);
-    this.coinsCountText.setScrollFactor(0);
+  update() {}
+
+  private get coinsCount(): number {
+    return this.appState.getProp("coins");
+  }
+
+  private recalculateCoinPosition(): void {
+    const { width } = this.scale;
+    const coinWidth = this.coinIcon.displayWidth + 10;
+    const countWidth = this.coinsCountText.width;
+    const totalWidth = coinWidth + countWidth + 20; // 20px padding between coin and count
+    this.coinIcon.setPosition(width - coinWidth, 28);
+    this.coinsCountText.setPosition(width - totalWidth, 23);
+  }
+
+  private displayCoins(): void {
+    this.coinIcon = this.add.image(0, 0, "coin").setScale(0.3);
+    this.coinsCountText = this.add
+      .text(0, 0, this.coinsCount.toString(), {
+        fontSize: "12px",
+        fontFamily: '"Press Start 2P"',
+      })
+      .setDepth(2);
+    this.recalculateCoinPosition();
+  }
+
+  handleDeath() {
+    this.showStartText();
+    this.hidePauseButton();
+    this.showBoostsButton();
+    this.decreaseHearts();
+  }
+
+  public updateCoinsCount(count: number): void {
+    this.coinsCountText.setText(count.toString());
+    this.recalculateCoinPosition();
   }
 
   showHearts(): void {
-    this.hearts = this.scene.add.group({
+    this.hearts = this.add.group({
       key: "heart",
       repeat: 2,
-      setXY: { x: 30, y: 30, stepX: 25 },
+      setScale: { x: 0.3, y: 0.3 },
+      setXY: { x: 30, y: 30, stepX: 22 },
     });
   }
   setHpIcons(hp: number): void {
@@ -66,41 +96,102 @@ export class HUDManager {
       });
   }
 
-  public updateCoinsCount(count: number): void {
-    this.coinsCountText.setText("x" + count.toString());
-  }
-
-  public updateHeroPosition(x: number): void {
-    this.positionText.setText(`X: ${Math.floor(x)}`);
-    this.positionText.setScrollFactor(0);
+  decreaseHearts(): void {
+    const heart = this.lastHeart;
+    if (!heart) {
+      this.showHearts();
+      return;
+    }
+    heart.destroy();
   }
 
   public showStartText(): void {
-    this.startText = this.scene.add
+    this.startText = this.add
       .text(
-        this.scene.cameras.main.worldView.x + this.scene.cameras.main.width / 2,
-        this.scene.cameras.main.worldView.y +
-          this.scene.cameras.main.height / 2,
+        this.cameras.main.worldView.x + this.cameras.main.width / 2,
+        this.cameras.main.worldView.y + this.cameras.main.height / 2,
         "tap to start",
         {
-          fontSize: "32px",
+          fontSize: "24px",
+          fontFamily: '"Press Start 2P"',
         }
       )
       .setOrigin(0.5);
     this.startText.setScrollFactor(0);
   }
 
-  decreaseHearts = (): void => {
-    const heart = this.firstAliveHeart;
-    if (!heart) return;
-    heart.destroy();
-  };
-
   public hideStartText(): void {
     this.startText.destroy();
   }
 
-  public get firstAliveHeart(): Phaser.GameObjects.Sprite | null {
-    return this.hearts.getFirstAlive();
+  private showPauseButton(): void {
+    this.pauseButton = this.add
+      .image(
+        this.cameras.main.worldView.x + this.cameras.main.width - 35,
+        this.cameras.main.worldView.y + this.cameras.main.height - 35,
+        "pause-button"
+      )
+      .setScale(0.25)
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setInteractive()
+      .on("pointerdown", () => {
+        if (this.pauseText?.active) {
+          this.unpauseGame();
+        } else {
+          this.pauseGame();
+        }
+      });
+  }
+
+  private showBoostsButton(): void {
+    this.boostsButton = this.add
+      .image(
+        62,
+        this.cameras.main.worldView.y + this.cameras.main.height - 30,
+        "boosts-button"
+      )
+      .setScale(0.12)
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setInteractive()
+      .on("pointerdown", () => {
+        this.scene.launch("Boosts");
+        this.scene.stop("HUD").stop("Game");
+      });
+  }
+
+  private hideBoostsButton(): void {
+    this.boostsButton?.destroy();
+  }
+
+  private hidePauseButton(): void {
+    this.pauseButton?.destroy();
+  }
+
+  private pauseGame() {
+    this.eventBus.emit(EVENTS.PAUSE_GAME);
+    this.pauseText = this.add
+      .text(
+        this.cameras.main.worldView.x + this.cameras.main.width / 2,
+        this.cameras.main.worldView.y + this.cameras.main.height / 2,
+        "PAUSED",
+        {
+          fontSize: "32px",
+          fontFamily: '"Press Start 2P"',
+        }
+      )
+      .setDepth(4)
+      .setOrigin(0.5)
+      .setScrollFactor(0);
+  }
+
+  private unpauseGame() {
+    this.pauseText.destroy();
+    this.eventBus.emit(EVENTS.RESUME_GAME);
+  }
+
+  public get lastHeart(): Phaser.GameObjects.GameObject | undefined {
+    return this.hearts.getChildren().at(-1);
   }
 }

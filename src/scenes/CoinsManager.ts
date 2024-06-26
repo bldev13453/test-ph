@@ -1,17 +1,19 @@
 import { Physics } from "phaser";
 import { Game } from "./Game";
+import { EVENTS } from "./events";
 
 export class CoinsManager {
   coinsCount: number;
 
   constructor(readonly scene: Game) {
-    this.coinsCount = scene.registry.get("coinsCount") || 0;
-    this.scene.hudManager.updateCoinsCount(this.coinsCount);
+    this.coinsCount = this.scene.appState.getProp("coins") || 0;
   }
 
   createCoin = (x: number, y: number): void => {
-    const coin = this.scene.physics.add.sprite(x, y, "coin");
-    coin.setScale(0.3);
+    const coin = this.scene.physics.add
+      .sprite(x, y, "coin")
+      .setScale(0.3)
+      .setDepth(2);
     this.scene.physics.add.overlap(
       this.scene.heroManager.sprite,
       coin,
@@ -26,7 +28,7 @@ export class CoinsManager {
     coin: Physics.Arcade.Sprite
   ): void => {
     this.coinsCount++;
-    this.scene.registry.set("coinsCount", this.coinsCount);
+    this.scene.appState.setProp("coins", this.coinsCount);
 
     this.scene.sound?.play("coin");
     coin.disableBody(true, false);
@@ -41,6 +43,6 @@ export class CoinsManager {
         coin.destroy();
       },
     });
-    this.scene.hudManager.updateCoinsCount(this.coinsCount);
+    this.scene.eventBus.emit(EVENTS.COIN_COLLECTED, this.coinsCount);
   };
 }
