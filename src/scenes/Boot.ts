@@ -44,6 +44,15 @@ export class Boot extends Scene {
       frameWidth: 296,
       frameHeight: 209,
     });
+
+    this.load.spritesheet("doge-sprite", "assets/doge-sprite.png", {
+      frameWidth: 540,
+      frameHeight: 480,
+    });
+    this.load.spritesheet("pepe-sprite", "assets/pepe-sprite.png", {
+      frameWidth: 320,
+      frameHeight: 440,
+    });
   }
 
   async create() {
@@ -60,7 +69,10 @@ export class Boot extends Scene {
     });
 
     await appState.initState();
-    this.scene.launch("Preloader").launch("Boosts");
-    // .launch("Game").launch("HUD");
+    this.scene
+      .launch("Preloader")
+      // .launch("Boosts");
+      .launch("Game")
+      .launch("HUD");
   }
 }
