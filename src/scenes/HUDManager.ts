@@ -47,6 +47,10 @@ export class HUDManager extends Scene {
     return this.appState.getProp("coins");
   }
 
+  private get livesCount(): number {
+    return this.appState.getProp("lives") || 3;
+  }
+
   private recalculateCoinPosition(): void {
     const { width } = this.scale;
     const coinWidth = this.coinIcon.displayWidth + 10;
@@ -72,6 +76,7 @@ export class HUDManager extends Scene {
     this.hidePauseButton();
     this.showBoostsButton();
     this.decreaseHearts();
+    this.scene.restart();
   }
 
   public updateCoinsCount(count: number): void {
@@ -82,7 +87,7 @@ export class HUDManager extends Scene {
   showHearts(): void {
     this.hearts = this.add.group({
       key: "heart",
-      repeat: 2,
+      repeat: this.livesCount - 1,
       setScale: { x: 0.3, y: 0.3 },
       setXY: { x: 30, y: 30, stepX: 22 },
     });

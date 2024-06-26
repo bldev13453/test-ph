@@ -28,14 +28,20 @@ export class HeroManager {
       this.scene.scale.height / 5
     );
 
-    this.hp = this.scene.registry.get("hp") || 3;
+    this.hp = this.livesCount;
     this.scene.eventBus.on(EVENTS.HIT, () => {
       this.setHp(this.hp - 1);
+      this.scene.appState.setProp("lives", this.hp);
     });
     this.scene.eventBus.on(EVENTS.FALL, () => {
       this.setHp(this.hp - 1);
+      this.scene.appState.setProp("lives", this.hp);
     });
     // this.scene.hudManager.setHpIcons(this.hp);
+  }
+
+  private get livesCount(): number {
+    return this.scene.appState.getProp("lives") || 3;
   }
   resetPosition(): void {
     this.hero.setPosition(

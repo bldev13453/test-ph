@@ -20,6 +20,7 @@ export class Game extends Scene {
 
   init(): void {}
   create(): void {
+    this.gameState = "start";
     const bg = this.add.image(
       this.screenCenterX,
       this.screenCenterY,
