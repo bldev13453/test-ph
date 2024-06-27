@@ -21,15 +21,7 @@ export class Game extends Scene {
   init(): void {}
   create(): void {
     this.gameState = "start";
-    const bg = this.add.image(
-      this.screenCenterX,
-      this.screenCenterY,
-      "background"
-    );
-    bg.setDepth(1);
-    const { width, height } = this.scale;
-    bg.setScale(Math.max(width / bg.width, height / bg.height));
-    bg.setScrollFactor(0);
+    this.addBackground();
     this.heroManager = new HeroManager(this);
     this.coinsManager = new CoinsManager(this);
     this.platformManager = new PlatformManager(this);
@@ -47,6 +39,19 @@ export class Game extends Scene {
     this.eventBus.on(EVENTS.HIT, () => {
       this.restartScene();
     });
+  }
+
+  private addBackground(): void {
+    const { width, height } = this.scale;
+    let x = 1000;
+    for (let i = 0; i < 5; i++) {
+      const bg = this.add.image(x, this.screenCenterY, "background");
+      bg.setDepth(1);
+      bg.setScale(Math.max(width / bg.width, height / bg.height) - 0.05);
+      bg.setScrollFactor(0.05);
+
+      x += bg.displayWidth;
+    }
   }
 
   start(): void {

@@ -8,7 +8,7 @@ export class Boot extends Scene {
 
   preload() {
     // Load image assets
-    this.load.image("background", "assets/skyBg.png");
+    this.load.image("background", "assets/sky.png");
     this.load.image("platform", "assets/platform.png");
     this.load.image("heart", "assets/heart.png");
     this.load.image("spike", "assets/spike.png");
