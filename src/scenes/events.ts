@@ -7,4 +7,6 @@ export const EVENTS = {
   COIN_COLLECTED: "coinCollected",
   BOOSTS_CLICKED: "boostsClicked",
   FRIENDS_CLICKED: "friendsClicked",
+  COLLECT_PEPE: "collectPepe",
+  COLLECT_DOGE: "collectDoge",
 };

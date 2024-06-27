@@ -22,6 +22,36 @@ export class PlatformManager {
       this.scene.heroManager.sprite,
       initialColumn.getGroup()
     );
+
+    this.initAnimations();
+  }
+
+  private initAnimations(): void {
+    // Animation for doge
+    if (!this.scene.anims.exists("doge")) {
+      this.scene.anims.create({
+        key: "doge",
+        frames: this.scene.anims.generateFrameNumbers("doge-sprite", {
+          start: 0,
+          end: 1,
+        }),
+        frameRate: 3,
+        repeat: -1,
+      });
+    }
+
+    // Animation for pepe
+    if (!this.scene.anims.exists("pepe")) {
+      this.scene.anims.create({
+        key: "pepe",
+        frames: this.scene.anims.generateFrameNumbers("pepe-sprite", {
+          start: 0,
+          end: 1,
+        }),
+        frameRate: 2,
+        repeat: -1,
+      });
+    }
   }
 
   public createMorePlatforms(): void {
@@ -181,11 +211,33 @@ export class PlatformColumn {
           y - 50
         );
       } else if (PhaserMath.Between(0, 10) === 1) {
-        // this.createNpc(lastX - block.displayWidth, y - 70);
+        this.createNpc(lastX - block.displayWidth, y - 70);
       }
     }
   }
 
+  private collectNpc(
+    hero: GameObjects.Sprite,
+    npc: Physics.Arcade.Sprite,
+    name: "pepe" | "doge"
+  ): void {
+    // this.scene.sound?.play("coin");
+    npc.disableBody(true, false);
+
+    this.scene.tweens.add({
+      targets: npc,
+      y: npc.y - 100,
+      alpha: 0,
+      ease: "Power1",
+      duration: 800,
+      onComplete: () => {
+        npc.destroy();
+      },
+    });
+    const eventName =
+      name === "pepe" ? EVENTS.COLLECT_PEPE : EVENTS.COLLECT_DOGE;
+    this.scene.eventBus.emit(eventName);
+  }
   private createNpc(x: number, y: number) {
     if (PhaserMath.Between(1, 2) === 1) {
       this.createDoge(x, y);
@@ -195,17 +247,40 @@ export class PlatformColumn {
   }
 
   private createPepe(x: number, y: number) {
-    this.scene.physics.add
+    const pepe = this.scene.physics.add
       .sprite(x, y, "pepe-sprite")
       .setScale(0.15)
       .setDepth(2);
+
+    this.addNpcOverlap(pepe, "pepe");
+    pepe.anims.play("pepe");
   }
 
   private createDoge(x: number, y: number) {
-    this.scene.physics.add
+    const doge = this.scene.physics.add
       .sprite(x, y, "doge-sprite")
       .setScale(0.15)
       .setDepth(2);
+    this.addNpcOverlap(doge, "doge");
+    doge.anims.play("doge");
+  }
+
+  private addNpcOverlap(
+    npc: Physics.Arcade.Sprite,
+    name: "pepe" | "doge"
+  ): void {
+    this.scene.physics.add.overlap(
+      this.scene.heroManager.sprite,
+      npc,
+      (hero, npc) =>
+        this.collectNpc(
+          hero as Physics.Arcade.Sprite,
+          npc as Physics.Arcade.Sprite,
+          name
+        ),
+      undefined,
+      this.scene
+    );
   }
 
   private createSpikes(x: number, y: number, count: number): void {
@@ -223,18 +298,19 @@ export class PlatformColumn {
     hero: Physics.Arcade.Sprite,
     spike: Physics.Arcade.Sprite
   ): void {
-    if (!this.isHeroDamaged) {
-      this.isHeroDamaged = true;
-      hero.setTint(0xff0000);
-      this.scene.time.addEvent({
-        delay: 200,
-        callback: () => {
-          hero.clearTint();
-        },
-        callbackScope: this,
-      });
-      this.scene.eventBus.emit(EVENTS.HIT);
-    }
+    if (this.scene.heroManager.shieldBoosterActive) return;
+    if (this.isHeroDamaged) return;
+
+    this.isHeroDamaged = true;
+    hero.setTint(0xff0000);
+    this.scene.time.addEvent({
+      delay: 200,
+      callback: () => {
+        hero.clearTint();
+      },
+      callbackScope: this,
+    });
+    this.scene.eventBus.emit(EVENTS.HIT);
   }
 
   public removeColumn(): void {

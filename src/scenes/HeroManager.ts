@@ -1,4 +1,4 @@
-import { Physics, Cameras } from "phaser";
+import { Physics } from "phaser";
 import { CONFIG } from "./config";
 import { Game } from "./Game";
 import { EVENTS } from "./events";
@@ -6,6 +6,8 @@ import { EVENTS } from "./events";
 export class HeroManager {
   private hero: Physics.Arcade.Sprite;
   private hp: number;
+  public shieldBoosterActive = false;
+  public jumpBoosterActive = false;
   constructor(private scene: Game) {
     this.hero = this.scene.physics.add
       .sprite(
@@ -32,15 +34,51 @@ export class HeroManager {
     this.scene.eventBus.on(EVENTS.HIT, () => {
       this.setHp(this.hp - 1);
       this.scene.appState.setGameProp("hpAmount", this.hp);
+      this.scene.restartScene();
     });
     this.scene.eventBus.on(EVENTS.FALL, () => {
       this.setHp(this.hp - 1);
       this.scene.appState.setGameProp("hpAmount", this.hp);
+      this.scene.restartScene();
+    });
+    this.scene.eventBus.on(EVENTS.COLLECT_PEPE, () => {
+      this.shieldBoosterActive = true;
+
+      this.scene.time.addEvent({
+        delay: this.shieldDuration * 1000,
+        callback: () => {
+          this.shieldBoosterActive = false;
+        },
+        callbackScope: this,
+      });
+    });
+    this.scene.eventBus.on(EVENTS.COLLECT_DOGE, () => {
+      this.jumpBoosterActive = true;
+      this.scene.time.addEvent({
+        delay: this.jumpDuration * 1000,
+        callback: () => {
+          this.jumpBoosterActive = false;
+        },
+        callbackScope: this,
+      });
     });
   }
 
   private get livesCount(): number {
     return this.scene.appState.getGameProp("hpAmount") || 3;
+  }
+
+  private get shieldLevel(): number {
+    return this.scene.appState.getGameProp("pepeLevel") || 1;
+  }
+  private get shieldDuration(): number {
+    return this.shieldLevel * 5; // seconds
+  }
+  private get jumpLevel(): number {
+    return this.scene.appState.getGameProp("dogeLevel") || 0;
+  }
+  private get jumpDuration(): number {
+    return this.jumpLevel * 5;
   }
   resetPosition(): void {
     this.hero.setPosition(

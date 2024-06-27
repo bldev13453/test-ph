@@ -76,7 +76,6 @@ export class HUDManager extends Scene {
     this.hidePauseButton();
     this.showBoostsButton();
     this.decreaseHearts();
-    this.scene.restart();
   }
 
   public updateCoinsCount(count: number): void {

@@ -33,17 +33,11 @@ export class Game extends Scene {
     this.eventBus.on(EVENTS.RESUME_GAME, () => {
       this.scene.resume();
     });
-    this.eventBus.on(EVENTS.FALL, () => {
-      this.restartScene();
-    });
-    this.eventBus.on(EVENTS.HIT, () => {
-      this.restartScene();
-    });
   }
 
   private addBackground(): void {
     const { width, height } = this.scale;
-    let x = 1000;
+    let x = 0;
     for (let i = 0; i < 5; i++) {
       const bg = this.add.image(x, this.screenCenterY, "background");
       bg.setDepth(1);
