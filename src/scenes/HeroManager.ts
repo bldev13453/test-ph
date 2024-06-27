@@ -1,4 +1,4 @@
-import { Physics } from "phaser";
+import { Physics, Cameras } from "phaser";
 import { CONFIG } from "./config";
 import { Game } from "./Game";
 import { EVENTS } from "./events";
@@ -23,9 +23,9 @@ export class HeroManager {
       this.hero,
       undefined,
       undefined,
+      0.02,
       undefined,
-      undefined,
-      this.scene.scale.height / 5
+      this.scene.scale.height / 7
     );
 
     this.hp = this.livesCount;

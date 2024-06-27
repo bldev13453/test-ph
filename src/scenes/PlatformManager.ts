@@ -4,39 +4,158 @@ import { Game } from "./Game";
 import { EVENTS } from "./events";
 
 export class PlatformManager {
-  private platforms: Physics.Arcade.StaticGroup;
-  private platformGroup: GameObjects.Group;
-  private spikes: Physics.Arcade.StaticGroup;
-  private isHeroDamaged: boolean;
+  private platformColumns: PlatformColumn[] = [];
 
   constructor(private scene: Game) {
     const { height, width } = this.scene.scale;
-    this.platforms = this.scene.physics.add.staticGroup();
-    this.platformGroup = this.scene.add.group({
-      removeCallback: (platform: GameObjects.GameObject) => {
-        this.platforms.killAndHide(platform);
-      },
-    });
-    this.spikes = this.scene.physics.add.staticGroup();
-    this.isHeroDamaged = false;
 
-    this.createPlatform(-width, height - 50, width * 0.05);
+    const initialColumn = new PlatformColumn(
+      this.scene,
+      -width,
+      height - 50,
+      1,
+      true
+    );
+    this.platformColumns.push(initialColumn);
 
     this.scene.physics.add.collider(
       this.scene.heroManager.sprite,
-      this.staticGroup
+      initialColumn.getGroup()
     );
+  }
+
+  public createMorePlatforms(): void {
+    const { width } = this.scene.scale;
+    const lastColumn = this.platformColumns[this.platformColumns.length - 1];
+    const lastPlatformGroup = lastColumn.getGroup();
+    const groupMaxX = Math.max(
+      ...lastPlatformGroup
+        .getChildren()
+        .map((item) => (item as GameObjects.Image).x)
+    );
+
+    const lastPlatform = lastPlatformGroup.getLast(true) as GameObjects.Image;
+
+    if (
+      lastPlatform &&
+      groupMaxX < this.scene.cameras.main.scrollX + width + 300
+    ) {
+      const patterns = [1, 2, 3, 4, 5];
+      const selectedPattern =
+        patterns[PhaserMath.Between(0, patterns.length - 1)];
+
+      const columnGap = 40;
+
+      const newX = groupMaxX + lastPlatform.displayWidth + columnGap;
+      const newY = lastPlatform.y - PhaserMath.Between(-100, 10);
+
+      const newColumn = new PlatformColumn(
+        this.scene,
+        newX,
+        newY,
+        selectedPattern
+      );
+      this.platformColumns.push(newColumn);
+
+      const newColumnMinY = newColumn.minY;
+
+      if (Math.abs(newColumnMinY - newY) > 50) {
+        const selectedPattern =
+          patterns[PhaserMath.Between(0, patterns.length - 1)];
+        const lowerColumn = new PlatformColumn(
+          this.scene,
+          newColumn.maxX + columnGap,
+          newY + 150,
+          selectedPattern
+        );
+        this.platformColumns.push(lowerColumn);
+      }
+    }
+  }
+
+  public update(): void {
+    const lastPlatform = this.platformColumns[this.platformColumns.length - 1]
+      .getGroup()
+      .getLast(true) as GameObjects.Image;
+
+    const lastPlatformY = lastPlatform ? lastPlatform.y : 0;
+    if (this.scene.heroManager.sprite.y > Math.abs(lastPlatformY) + 1000) {
+      this.handleFall();
+    }
+  }
+
+  private resetPlatforms(): void {
+    this.platformColumns.forEach((column) => {
+      column.removeColumn();
+    });
+
+    this.platformColumns = [];
+  }
+
+  private handleFall(): void {
+    this.resetPlatforms();
+    this.scene.eventBus.emit(EVENTS.FALL);
+  }
+
+  public startGeneratePlatforms(): void {
+    this.scene.time.addEvent({
+      delay: 500,
+      callback: this.createMorePlatforms,
+      callbackScope: this,
+      loop: true,
+    });
+  }
+}
+
+export class PlatformColumn {
+  private platforms: Physics.Arcade.StaticGroup;
+  private spikes: Physics.Arcade.StaticGroup;
+  private platformGroup: GameObjects.Group;
+  private isHeroDamaged = false;
+
+  constructor(
+    private scene: Game,
+    private x: number,
+    private y: number,
+    private count: number,
+    private isInit?: boolean
+  ) {
+    this.platforms = this.scene.physics.add.staticGroup();
+    this.spikes = this.scene.physics.add.staticGroup();
+    this.platformGroup = this.scene.add.group();
+
+    this.createColumn();
     this.scene.physics.add.overlap(
       this.scene.heroManager.sprite,
-      this.spikesGroup,
+      this.spikes,
       this.hitSpike as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
       undefined,
       this
     );
+
+    this.scene.physics.add.collider(
+      this.scene.heroManager.sprite,
+      this.platformGroup
+    );
   }
 
-  public createPlatform(x: number, y: number, platformLength = 4): void {
+  private createColumn(): void {
+    let lastY = this.y;
+
+    for (let i = 0; i < this.count; i++) {
+      const platformLength = this.isInit ? 20 : PhaserMath.Between(3, 10);
+      this.createPlatform(
+        this.x + PhaserMath.Between(0, 50),
+        lastY,
+        platformLength
+      );
+      lastY -= 80;
+    }
+  }
+
+  private createPlatform(x: number, y: number, platformLength: number): void {
     let lastX = x;
+
     for (let i = 0; i < platformLength; i++) {
       const block = this.platforms.create(lastX, y, "platform");
       block.setOrigin(0, 1);
@@ -49,40 +168,47 @@ export class PlatformManager {
       this.platformGroup.add(block);
       block.setDepth(1);
       lastX += block.displayWidth;
-
-      if (
-        this.scene.heroManager &&
-        this.scene.heroManager.sprite.x > CONFIG.startGenerateItemsCoordinateX
-      ) {
-        if (PhaserMath.Between(0, 1) === 1) {
-          this.scene.coinsManager.createCoin(
-            lastX - block.displayWidth / 2,
-            y - 50
-          );
-        } else if (PhaserMath.Between(0, 10) === 1 && platformLength > 4) {
-          this.createSpikes(
-            lastX - block.displayWidth,
-            y - block.displayHeight,
-            3
-          );
-        } else if (PhaserMath.Between(0, 7) === 1 && platformLength > 3) {
-          this.createNpc(lastX - block.displayWidth, y - 70);
-        }
+      if (this.isInit) continue;
+      if (i > 3 && platformLength > 3 && PhaserMath.Between(0, 10) === 1) {
+        this.createSpikes(
+          lastX - block.displayWidth,
+          y - block.displayHeight,
+          3
+        );
+      } else if (PhaserMath.Between(0, 1) === 1) {
+        this.scene.coinsManager.createCoin(
+          lastX - block.displayWidth / 2,
+          y - 50
+        );
+      } else if (PhaserMath.Between(0, 10) === 1) {
+        // this.createNpc(lastX - block.displayWidth, y - 70);
       }
     }
   }
 
   private createNpc(x: number, y: number) {
-    const npcType = PhaserMath.Between(1, 2) === 1 ? "doge" : "pepe";
-    const sprite = `${npcType}-sprite`;
-    const yPosition = npcType === "doge" ? y : y + 5;
-    const npc = this.scene.physics.add
-      .sprite(x, yPosition, sprite)
+    if (PhaserMath.Between(1, 2) === 1) {
+      this.createDoge(x, y);
+    } else {
+      this.createPepe(x, y);
+    }
+  }
+
+  private createPepe(x: number, y: number) {
+    this.scene.physics.add
+      .sprite(x, y, "pepe-sprite")
       .setScale(0.15)
       .setDepth(2);
   }
 
-  public createSpikes(x: number, y: number, count: number): void {
+  private createDoge(x: number, y: number) {
+    this.scene.physics.add
+      .sprite(x, y, "doge-sprite")
+      .setScale(0.15)
+      .setDepth(2);
+  }
+
+  private createSpikes(x: number, y: number, count: number): void {
     for (let i = 0; i < count; i++) {
       this.spikes
         .create(x + i * (64 * CONFIG.scale), y, "spike")
@@ -98,8 +224,7 @@ export class PlatformManager {
     spike: Physics.Arcade.Sprite
   ): void {
     if (!this.isHeroDamaged) {
-      // Check if the hero has already been damaged
-      this.isHeroDamaged = true; // Set the flag
+      this.isHeroDamaged = true;
       hero.setTint(0xff0000);
       this.scene.time.addEvent({
         delay: 200,
@@ -112,81 +237,25 @@ export class PlatformManager {
     }
   }
 
-  public update(): void {
-    this.platformGroup
-      .getChildren()
-      .forEach((platform: GameObjects.GameObject) => {
-        if (
-          (platform as GameObjects.Image).x <
-          this.scene.cameras.main.scrollX -
-            (platform as GameObjects.Image).displayWidth
-        ) {
-          this.platformGroup.killAndHide(platform);
-          this.platformGroup.remove(platform);
-        }
-      });
-
-    const lastPlatform = this.platformGroup.getLast(true) as GameObjects.Image;
-
-    const lastPlatformY = lastPlatform ? lastPlatform.y : 0;
-    if (this.scene.heroManager.sprite.y > lastPlatformY + 500) {
-      this.handleFall();
-    }
+  public removeColumn(): void {
+    this.platformGroup.clear(true, true);
   }
 
-  private handleFall(): void {
-    this.scene.eventBus.emit(EVENTS.FALL);
-  }
-
-  public createMorePlatforms(): void {
-    const { width } = this.scene.scale;
-    const lastPlatform = this.platformGroup.getLast(true) as GameObjects.Image;
-
-    if (
-      lastPlatform &&
-      lastPlatform.x < this.scene.cameras.main.scrollX + width
-    ) {
-      const platformsCount = PhaserMath.Between(1, 3);
-      let previousX = lastPlatform.x + lastPlatform.displayWidth;
-
-      for (let i = 0; i < platformsCount; i++) {
-        const gap = PhaserMath.Between(
-          CONFIG.platformSizeTexture * CONFIG.scale,
-          CONFIG.platformSizeTexture * CONFIG.scale * 3
-        );
-        const newX = previousX + gap;
-        const newYDirection = PhaserMath.Between(0, 1) === 0 ? -1 : 1;
-        const newY =
-          lastPlatform.y + newYDirection * PhaserMath.Between(20, 40);
-        const platformLength = PhaserMath.Between(4, 6);
-
-        this.createPlatform(newX, newY, platformLength);
-        previousX =
-          newX +
-          (this.platforms.getChildren()[0] as GameObjects.Image).displayWidth *
-            platformLength;
-      }
-    }
-  }
-
-  public startGeneratePlatforms(): void {
-    this.scene.time.addEvent({
-      delay: 500,
-      callback: this.createMorePlatforms,
-      callbackScope: this,
-      loop: true,
-    });
-  }
-
-  public get group(): GameObjects.Group {
+  public getGroup(): GameObjects.Group {
     return this.platformGroup;
   }
-
-  public get staticGroup(): Physics.Arcade.StaticGroup {
-    return this.platforms;
+  public get minY(): number {
+    return Math.min(
+      ...this.platforms
+        .getChildren()
+        .map((item) => (item as GameObjects.Image).y)
+    );
   }
-
-  public get spikesGroup(): Physics.Arcade.StaticGroup {
-    return this.spikes;
+  public get maxX(): number {
+    return Math.max(
+      ...this.platforms
+        .getChildren()
+        .map((item) => (item as GameObjects.Image).x)
+    );
   }
 }
