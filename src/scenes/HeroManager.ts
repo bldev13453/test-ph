@@ -24,7 +24,7 @@ export class HeroManager {
       undefined,
       undefined,
       0.02,
-      undefined,
+      -this.scene.scale.width / 5,
       this.scene.scale.height / 7
     );
 
