@@ -1,19 +1,19 @@
-import { State } from "../types/State";
+import { ModelsUserState } from "./memegame-api";
 
-export const getState = (): Promise<State> => {
-  return new Promise<State>((resolve) => {
+export const getState = (): Promise<ModelsUserState> => {
+  return new Promise<ModelsUserState>((resolve) => {
     setTimeout(() => {
       resolve({
-        coins: 1000,
-        lives: 3,
-        globalGoal: 35, // percentage
-        gameBoosters: {
-          lives: 1,
-          // coins: 1,
+        state: {
+          dogeLevel: 0,
+          pepeLevel: 0,
+          hpAmount: 0,
+          hpLevel: 0,
+          hpFillsAt: "",
+          tokenAmount: 1000,
         },
-        memeBoosters: {
-          shield: 1,
-          doge: 1,
+        user: {
+          id: 1,
         },
       });
     }, 200);

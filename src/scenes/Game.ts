@@ -5,7 +5,7 @@ import { HUDManager } from "./HUDManager";
 import { CoinsManager } from "./CoinsManager";
 import { EventBus } from "./EventBus";
 import { EVENTS } from "./events";
-import { IAppState } from "./State";
+import { IAppState } from "./AppState";
 export class Game extends Scene {
   heroManager: HeroManager;
   platformManager: PlatformManager;

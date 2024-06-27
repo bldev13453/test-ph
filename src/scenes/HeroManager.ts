@@ -31,17 +31,16 @@ export class HeroManager {
     this.hp = this.livesCount;
     this.scene.eventBus.on(EVENTS.HIT, () => {
       this.setHp(this.hp - 1);
-      this.scene.appState.setProp("lives", this.hp);
+      this.scene.appState.setGameProp("hpAmount", this.hp);
     });
     this.scene.eventBus.on(EVENTS.FALL, () => {
       this.setHp(this.hp - 1);
-      this.scene.appState.setProp("lives", this.hp);
+      this.scene.appState.setGameProp("hpAmount", this.hp);
     });
-    // this.scene.hudManager.setHpIcons(this.hp);
   }
 
   private get livesCount(): number {
-    return this.scene.appState.getProp("lives") || 3;
+    return this.scene.appState.getGameProp("hpAmount") || 3;
   }
   resetPosition(): void {
     this.hero.setPosition(

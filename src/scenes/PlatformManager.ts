@@ -59,15 +59,27 @@ export class PlatformManager {
             lastX - block.displayWidth / 2,
             y - 50
           );
-        } else if (PhaserMath.Between(0, 8) === 1 && platformLength > 4) {
+        } else if (PhaserMath.Between(0, 10) === 1 && platformLength > 4) {
           this.createSpikes(
             lastX - block.displayWidth,
             y - block.displayHeight,
             3
           );
+        } else if (PhaserMath.Between(0, 7) === 1 && platformLength > 3) {
+          this.createNpc(lastX - block.displayWidth, y - 70);
         }
       }
     }
+  }
+
+  private createNpc(x: number, y: number) {
+    const npcType = PhaserMath.Between(1, 2) === 1 ? "doge" : "pepe";
+    const sprite = `${npcType}-sprite`;
+    const yPosition = npcType === "doge" ? y : y + 5;
+    const npc = this.scene.physics.add
+      .sprite(x, yPosition, sprite)
+      .setScale(0.15)
+      .setDepth(2);
   }
 
   public createSpikes(x: number, y: number, count: number): void {

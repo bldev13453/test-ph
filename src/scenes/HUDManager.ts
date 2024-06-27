@@ -1,7 +1,7 @@
 import { GameObjects, Scene, Events } from "phaser";
 import { EventBus } from "./EventBus";
 import { EVENTS } from "./events";
-import { IAppState } from "./State";
+import { IAppState } from "./AppState";
 
 // https://www.youtube.com/watch?v=G3GrBuTFJbI&t=1s
 export class HUDManager extends Scene {
@@ -44,11 +44,11 @@ export class HUDManager extends Scene {
   update() {}
 
   private get coinsCount(): number {
-    return this.appState.getProp("coins");
+    return this.appState.getGameProp("tokenAmount") || 0;
   }
 
   private get livesCount(): number {
-    return this.appState.getProp("lives") || 3;
+    return this.appState.getGameProp("hpAmount") || 3;
   }
 
   private recalculateCoinPosition(): void {

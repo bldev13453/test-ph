@@ -1,8 +1,13 @@
 import { GameObjects, Scene } from "phaser";
-import { IAppState } from "./State";
+import { IAppState } from "./AppState";
 
 type BoostsScreen = "game" | "meme";
-
+interface Boost {
+  name: "hpLevel" | "dogeLevel" | "pepeLevel";
+  icon: string;
+  price: number;
+  level: number;
+}
 export class Boosts extends Scene {
   private backButton: GameObjects.Image;
   private gameBoostsButton: GameObjects.Image;
@@ -11,40 +16,46 @@ export class Boosts extends Scene {
   private activeScreen: BoostsScreen = "game";
   private coin: GameObjects.Image;
   private count: GameObjects.Text;
-  private gameBoosts = [
+  private gameBoosts: Boost[] = [
     {
-      name: "HP",
+      name: "hpLevel" as const,
       icon: "card-doge",
       price: 1,
-      level: 1,
+      level: 0,
     },
-    {
-      name: "Magnet",
-      icon: "card-doge",
-      price: 1,
-      level: 1,
-    },
+    // {
+    //   name: "hpLevel" as const,
+    //   icon: "card-doge",
+    //   price: 1,
+    //   level: 0,
+    // },
   ];
-  private memeBoosts = [
+  private memeBoosts: Boost[] = [
     {
-      name: "Shield",
+      name: "dogeLevel" as const,
       icon: "card-doge",
       price: 1,
-      level: 1,
+      level: 0,
     },
     {
-      name: "Jump",
+      name: "pepeLevel" as const,
       icon: "card-doge",
       price: 1,
-      level: 1,
+      level: 0,
     },
   ];
 
-  currentBoosts = this.gameBoosts;
+  currentBoosts: Boost[] = this.gameBoosts;
 
   private cardsContainer: GameObjects.Container;
   constructor(private readonly appState: IAppState) {
     super("Boosts");
+    this.gameBoosts.forEach((boost) => {
+      boost.level = this.appState.getGameProp(boost.name) || 0;
+    });
+    this.memeBoosts.forEach((boost) => {
+      boost.level = this.appState.getGameProp(boost.name) || 0;
+    });
   }
 
   create() {
@@ -53,12 +64,25 @@ export class Boosts extends Scene {
     this.createBoostsButtons();
     this.createCards();
     this.displayCoins();
+    this.setActiveScreen("game");
   }
 
   update() {}
 
   private get coinsCount(): number {
-    return this.appState.getProp("coins");
+    return this.appState.getGameProp("tokenAmount") || 0;
+  }
+
+  private get dogeLevel(): number {
+    return this.appState.getGameProp("dogeLevel") || 0;
+  }
+
+  private get pepeLevel(): number {
+    return this.appState.getGameProp("pepeLevel") || 0;
+  }
+
+  private get hpLevel(): number {
+    return this.appState.getGameProp("hpLevel") || 0;
   }
 
   private setBackground() {
@@ -310,7 +334,9 @@ export class Boosts extends Scene {
     this.recalculateCoinPosition();
   }
 
-  private payForBoost(boosterName: string): void {
+  private payForBoost(
+    boosterName: "dogeLevel" | "pepeLevel" | "hpLevel"
+  ): void {
     if (this.coinsCount < 1) {
       return;
     }
@@ -321,8 +347,9 @@ export class Boosts extends Scene {
     if (!booster) return;
     if (booster.price > this.coinsCount) return;
 
-    this.appState.setProp("coins", this.coinsCount - booster.price);
+    this.appState.setGameProp("tokenAmount", this.coinsCount - booster.price);
     booster.level++;
+    this.appState.setGameProp(booster.name, booster.level);
     booster.price = booster.price * 2;
     this.updateCoinsDisplay();
   }

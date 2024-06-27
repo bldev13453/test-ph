@@ -6,7 +6,7 @@ export class CoinsManager {
   coinsCount: number;
 
   constructor(readonly scene: Game) {
-    this.coinsCount = this.scene.appState.getProp("coins") || 0;
+    this.coinsCount = this.scene.appState.getGameProp("tokenAmount") || 0;
   }
 
   createCoin = (x: number, y: number): void => {
@@ -28,7 +28,7 @@ export class CoinsManager {
     coin: Physics.Arcade.Sprite
   ): void => {
     this.coinsCount++;
-    this.scene.appState.setProp("coins", this.coinsCount);
+    this.scene.appState.setGameProp("tokenAmount", this.coinsCount);
 
     this.scene.sound?.play("coin");
     coin.disableBody(true, false);

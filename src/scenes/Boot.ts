@@ -1,5 +1,5 @@
 import { Scene } from "phaser";
-import appState from "./State";
+import appState from "./AppState";
 
 export class Boot extends Scene {
   constructor() {
