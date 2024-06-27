@@ -60,8 +60,6 @@ export class PlatformManager {
       const newColumnMinY = newColumn.minY;
 
       if (Math.abs(newColumnMinY - newY) > 50) {
-        console.log("new platform");
-
         const selectedPattern =
           patterns[PhaserMath.Between(0, patterns.length - 1)];
         const lowerColumn = new PlatformColumn(
