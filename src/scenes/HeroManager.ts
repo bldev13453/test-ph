@@ -8,6 +8,7 @@ export class HeroManager {
   private hp: number;
   public shieldBoosterActive = false;
   public jumpBoosterActive = false;
+  private jumpTwice = false;
   constructor(private scene: Game) {
     this.hero = this.scene.physics.add
       .sprite(
@@ -75,7 +76,7 @@ export class HeroManager {
     return this.shieldLevel * 5; // seconds
   }
   private get jumpLevel(): number {
-    return this.scene.appState.getGameProp("dogeLevel") || 0;
+    return this.scene.appState.getGameProp("dogeLevel") || 1;
   }
   private get jumpDuration(): number {
     return this.jumpLevel * 5;
@@ -127,6 +128,15 @@ export class HeroManager {
       this.scene.sound.play("jump");
       this.hero.setVelocityY(-CONFIG.jumpPower);
     }
+    if (
+      this.jumpBoosterActive &&
+      !this.hero.body?.touching.down &&
+      !this.jumpTwice
+    ) {
+      this.scene.sound.play("jump");
+      this.hero.setVelocityY(-CONFIG.jumpPower);
+      this.jumpTwice = true;
+    }
   }
 
   public updateAnimations(): void {
@@ -148,6 +158,9 @@ export class HeroManager {
     } else if (this.hero.anims.currentAnim?.key !== "walk") {
       this.hero.setTexture("hero_walk_sprite", 1);
       this.hero.anims.play("walk");
+    }
+    if (this.hero.body?.touching.down) {
+      this.jumpTwice = false;
     }
   }
   hit() {
