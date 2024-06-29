@@ -11,7 +11,6 @@ export class Boot extends Scene {
     this.load.image("background", "assets/sky.png");
     this.load.image("platform", "assets/platform.png");
     this.load.image("heart", "assets/heart.png");
-    this.load.image("spike", "assets/spike.png");
     this.load.image("coin", "assets/coin.png");
     this.load.image("boosts-button", "assets/boosts-button.png");
     this.load.image("friends-button", "assets/friends-button.png");
@@ -21,11 +20,13 @@ export class Boot extends Scene {
     this.load.image("card-base", "assets/card-base.png");
     this.load.image("card-doge", "assets/card-doge.png");
     this.load.image("game-boosts-button", "assets/gameBoosts-button.png");
+    this.load.image("bush", "assets/bush.png");
+    this.load.image("menu-ground", "assets/menu-ground.png");
+
     this.load.image(
       "game-boosts-button-hover",
       "assets/gameBoosts-buttonHover.png"
     );
-
     this.load.image("meme-boosts-button", "assets/memeBoosts-button.png");
     this.load.image(
       "meme-boosts-button-hover",

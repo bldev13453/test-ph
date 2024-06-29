@@ -139,7 +139,7 @@ export class PlatformManager {
 
 export class PlatformColumn {
   private platforms: Physics.Arcade.StaticGroup;
-  private spikes: Physics.Arcade.StaticGroup;
+  private bushes: Physics.Arcade.StaticGroup;
   private platformGroup: GameObjects.Group;
   private isHeroDamaged = false;
 
@@ -151,14 +151,14 @@ export class PlatformColumn {
     private isInit?: boolean
   ) {
     this.platforms = this.scene.physics.add.staticGroup();
-    this.spikes = this.scene.physics.add.staticGroup();
+    this.bushes = this.scene.physics.add.staticGroup();
     this.platformGroup = this.scene.add.group();
 
     this.createColumn();
     this.scene.physics.add.overlap(
       this.scene.heroManager.sprite,
-      this.spikes,
-      this.hitSpike as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
+      this.bushes,
+      this.hitBush as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
       undefined,
       this
     );
@@ -199,12 +199,8 @@ export class PlatformColumn {
       block.setDepth(1);
       lastX += block.displayWidth;
       if (this.isInit) continue;
-      if (i > 3 && platformLength > 3 && PhaserMath.Between(0, 10) === 1) {
-        this.createSpikes(
-          lastX - block.displayWidth,
-          y - block.displayHeight,
-          3
-        );
+      if (i > 3 && platformLength > 3 && PhaserMath.Between(0, 8) === 1) {
+        this.createBushes(lastX - block.displayWidth, y - block.displayHeight);
       } else if (PhaserMath.Between(0, 1) === 1) {
         this.scene.coinsManager.createCoin(
           lastX - block.displayWidth / 2,
@@ -248,8 +244,8 @@ export class PlatformColumn {
 
   private createPepe(x: number, y: number) {
     const pepe = this.scene.physics.add
-      .sprite(x, y, "pepe-sprite")
-      .setScale(0.15)
+      .sprite(x, y + 10, "pepe-sprite")
+      .setScale(0.12)
       .setDepth(2);
 
     this.addNpcOverlap(pepe, "pepe");
@@ -258,8 +254,8 @@ export class PlatformColumn {
 
   private createDoge(x: number, y: number) {
     const doge = this.scene.physics.add
-      .sprite(x, y, "doge-sprite")
-      .setScale(0.15)
+      .sprite(x, y + 10, "doge-sprite")
+      .setScale(0.12)
       .setDepth(2);
     this.addNpcOverlap(doge, "doge");
     doge.anims.play("doge");
@@ -283,20 +279,17 @@ export class PlatformColumn {
     );
   }
 
-  private createSpikes(x: number, y: number, count: number): void {
-    for (let i = 0; i < count; i++) {
-      this.spikes
-        .create(x + i * (64 * CONFIG.scale), y, "spike")
-        .setDepth(2)
-        .setOrigin(0, 1)
-        .setScale(CONFIG.scale)
-        .refreshBody();
-    }
+  private createBushes(x: number, y: number): void {
+    this.bushes
+      .create(x + 64 * CONFIG.scale, y, "bush")
+      .setDepth(2)
+      .setScale(0.1)
+      .refreshBody();
   }
 
-  private hitSpike(
+  private hitBush(
     hero: Physics.Arcade.Sprite,
-    spike: Physics.Arcade.Sprite
+    bush: Physics.Arcade.Sprite
   ): void {
     if (this.scene.heroManager.shieldBoosterActive) return;
     if (this.isHeroDamaged) return;
