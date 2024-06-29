@@ -1,4 +1,4 @@
-import { Physics, GameObjects, Math as PhaserMath } from "phaser";
+import { Physics, GameObjects, Math as PhaserMath, Types } from "phaser";
 import { CONFIG } from "./config";
 import { Game } from "./Game";
 import { EVENTS } from "./events";
@@ -12,7 +12,7 @@ export class PlatformManager {
     const initialColumn = new PlatformColumn(
       this.scene,
       -width,
-      height - 50,
+      height - 10,
       1,
       true
     );
@@ -65,7 +65,7 @@ export class PlatformManager {
     );
 
     const lastPlatform = lastPlatformGroup.getLast(true) as GameObjects.Image;
-
+    const isFirstColumn = this.platformColumns.length === 1;
     if (
       lastPlatform &&
       groupMaxX < this.scene.cameras.main.scrollX + width + 300
@@ -75,9 +75,11 @@ export class PlatformManager {
         patterns[PhaserMath.Between(0, patterns.length - 1)];
 
       const columnGap = 40;
-
       const newX = groupMaxX + lastPlatform.displayWidth + columnGap;
-      const newY = lastPlatform.y - PhaserMath.Between(-100, 10);
+
+      const newY = isFirstColumn
+        ? lastPlatform.y + 60
+        : lastPlatform.y - PhaserMath.Between(-20, 20);
 
       const newColumn = new PlatformColumn(
         this.scene,
@@ -154,7 +156,7 @@ export class PlatformColumn {
     this.bushes = this.scene.physics.add.staticGroup();
     this.platformGroup = this.scene.add.group();
 
-    this.createColumn();
+    this.createColumn(isInit);
     this.scene.physics.add.overlap(
       this.scene.heroManager.sprite,
       this.bushes,
@@ -165,20 +167,44 @@ export class PlatformColumn {
 
     this.scene.physics.add.collider(
       this.scene.heroManager.sprite,
-      this.platformGroup
+      this.platformGroup,
+      (obj1, obj2) => {
+        if (this.isInit) {
+          this.handleStartGroundCollide(
+            obj1 as Physics.Arcade.Sprite,
+            obj2 as Physics.Arcade.Sprite
+          );
+        }
+      }
     );
   }
 
-  private createColumn(): void {
-    let lastY = this.y;
+  private handleStartGroundCollide(
+    hero: Physics.Arcade.Sprite,
+    platform: Physics.Arcade.Sprite
+  ): void {
+    // Define the threshold for being "close to the end" of the platform
+    const closeThreshold = 1500;
 
-    for (let i = 0; i < this.count; i++) {
-      const platformLength = this.isInit ? 20 : PhaserMath.Between(3, 10);
-      this.createPlatform(
-        this.x + PhaserMath.Between(0, 50),
-        lastY,
-        platformLength
-      );
+    // Get the positions
+    const heroX = hero.x;
+
+    const platformEndX = platform.width;
+
+    // Check if the hero is within the threshold of the end of the platform
+    if (platformEndX - heroX <= closeThreshold) {
+      // Start generating more platforms
+      this.scene.platformManager.startGeneratePlatforms();
+    }
+  }
+
+  private createColumn(isInit: boolean = false): void {
+    const counter = isInit ? 1 : this.count;
+    const xPos = isInit ? -70 : this.x + PhaserMath.Between(0, 50);
+    let lastY = this.y;
+    for (let i = 0; i < counter; i++) {
+      const platformLength = PhaserMath.Between(3, 10);
+      this.createPlatform(xPos, lastY, platformLength);
       lastY -= 80;
     }
   }
@@ -187,18 +213,23 @@ export class PlatformColumn {
     let lastX = x;
 
     for (let i = 0; i < platformLength; i++) {
-      const block = this.platforms.create(lastX, y, "platform");
-      block.setOrigin(0, 1);
-      block.setScale(CONFIG.scale);
+      const texture = this.isInit ? "menu-ground" : "platform";
+      const block = this.platforms.create(lastX, y, texture);
+
+      const origin = this.isInit ? [0, 0] : [0, 1];
+      block.setOrigin(...origin);
+      block.setDepth(1);
+      block.setScale(this.isInit ? 0.4 : CONFIG.scale);
       block.refreshBody();
       block.body.checkCollision.up = true;
       block.body.checkCollision.down = false;
       block.body.checkCollision.left = false;
       block.body.checkCollision.right = false;
       this.platformGroup.add(block);
-      block.setDepth(1);
       lastX += block.displayWidth;
-      if (this.isInit) continue;
+
+      if (this.isInit) break;
+
       if (i > 3 && platformLength > 3 && PhaserMath.Between(0, 8) === 1) {
         this.createBushes(lastX - block.displayWidth, y - block.displayHeight);
       } else if (PhaserMath.Between(0, 1) === 1) {

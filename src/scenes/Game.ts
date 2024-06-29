@@ -39,10 +39,10 @@ export class Game extends Scene {
     const { width, height } = this.scale;
     let x = 0;
     for (let i = 0; i < 5; i++) {
-      const bg = this.add.image(x, this.screenCenterY, "background");
+      const bg = this.add.image(x, this.screenCenterY - 20, "background");
       bg.setDepth(1);
       bg.setScale(Math.max(width / bg.width, height / bg.height) - 0.05);
-      bg.setScrollFactor(0.05);
+      bg.setScrollFactor(0.05, 0);
 
       x += bg.displayWidth;
     }
@@ -52,7 +52,6 @@ export class Game extends Scene {
     this.eventBus.emit(EVENTS.START_GAME);
     this.gameState = "play";
     this.heroManager.start();
-    this.platformManager.startGeneratePlatforms();
   }
 
   update(): void {
