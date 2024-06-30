@@ -15,13 +15,14 @@ export class Game extends Scene {
   eventBus: Events.EventEmitter;
   constructor(readonly appState: IAppState) {
     super("Game");
-    this.eventBus = EventBus;
   }
 
-  init(): void {}
   create(): void {
+    this.eventBus = EventBus;
+
     this.gameState = "start";
     this.addBackground();
+
     this.heroManager = new HeroManager(this);
     this.coinsManager = new CoinsManager(this);
     this.platformManager = new PlatformManager(this);
@@ -57,12 +58,15 @@ export class Game extends Scene {
   update(): void {
     if (this.gameState === "play") {
       this.platformManager.update();
+      this.heroManager.update();
       this.heroManager.updateAnimations();
     }
   }
 
   restartScene(): void {
     this.gameState = "start";
+    this.eventBus.emit(EVENTS.RESTART_GAME);
+    this.eventBus.destroy();
     this.scene.restart();
   }
 

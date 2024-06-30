@@ -1,21 +1,33 @@
 import { Data } from "phaser";
 import { EventBus } from "./EventBus";
 import { getState } from "../api/getState";
-import { ModelsState, ModelsUser, ModelsUserState } from "../api/memegame-api";
-
+import type {
+  ModelsState,
+  ModelsUser,
+  ModelsUserState,
+} from "../api/memegame-api";
+interface ExtendedModelState extends ModelsState {
+  mewLevel: number;
+}
 export interface IAppState {
   initState(): Promise<void>;
-  getGameState(): ModelsState;
-  getUserState(): ModelsState;
-  setGameProp<T extends keyof ModelsState>(key: T, value: ModelsState[T]): void;
-  getGameProp<T extends keyof ModelsState>(key: T): ModelsState[T];
+  getGameState(): ExtendedModelState;
+  getUserState(): ModelsUser;
+  setGameProp<T extends keyof ExtendedModelState>(
+    key: T,
+    value: ExtendedModelState[T]
+  ): void;
+  getGameProp<T extends keyof ExtendedModelState>(
+    key: T
+  ): ExtendedModelState[T];
   getUserProp<T extends keyof ModelsUser>(key: T): ModelsUser[T];
 }
 
 class AppState extends Data.DataManager implements IAppState {
-  private gameState: ModelsState = {
+  private gameState: ExtendedModelState = {
     dogeLevel: 0,
     pepeLevel: 0,
+    mewLevel: 0,
     hpAmount: 0,
     hpLevel: 0,
     hpFillsAt: "",
@@ -26,19 +38,24 @@ class AppState extends Data.DataManager implements IAppState {
     super(EventBus);
   }
 
-  getGameState(): ModelsState {
+  getGameState(): ExtendedModelState {
     return this.gameState;
   }
 
-  setGameProp<T extends keyof ModelsState>(key: T, value: ModelsState[T]) {
+  setGameProp<T extends keyof ExtendedModelState>(
+    key: T,
+    value: ExtendedModelState[T]
+  ) {
     this.gameState[key] = value;
   }
-  getGameProp<T extends keyof ModelsState>(key: T): ModelsState[T] {
+  getGameProp<T extends keyof ExtendedModelState>(
+    key: T
+  ): ExtendedModelState[T] {
     return this.gameState[key];
   }
   private userState: ModelsUser = {};
 
-  getUserState(): ModelsState {
+  getUserState(): ModelsUser {
     return this.userState;
   }
 
@@ -46,14 +63,14 @@ class AppState extends Data.DataManager implements IAppState {
     return this.userState[key];
   }
 
-  setState({ user, state }: ModelsUserState) {
+  setState({ user, state }: ModelsUserState & { state: ExtendedModelState }) {
     this.userState = user!;
     this.gameState = state!;
   }
 
   async initState() {
     const state = await getState();
-    this.setState(state);
+    this.setState(state as ModelsUserState & { state: ExtendedModelState });
   }
 }
 

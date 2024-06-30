@@ -1,12 +1,16 @@
 export const EVENTS = {
   START_GAME: "startGame",
+  RESTART_GAME: "restartGame",
   PAUSE_GAME: "pauseGame",
   RESUME_GAME: "resumeGame",
   FALL: "fall",
   HIT: "hit",
+  HERO_RUN: "heroRun",
   COIN_COLLECTED: "coinCollected",
+  REACH_COINS_LIMIT: "reachCoinsLimit",
   BOOSTS_CLICKED: "boostsClicked",
   FRIENDS_CLICKED: "friendsClicked",
   COLLECT_PEPE: "collectPepe",
   COLLECT_DOGE: "collectDoge",
+  COLLECT_MEW: "collectMew",
 };

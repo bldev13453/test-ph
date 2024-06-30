@@ -1,11 +1,12 @@
-import { Physics, GameObjects, Math as PhaserMath, Types } from "phaser";
+import { Physics, GameObjects, Math as PhaserMath } from "phaser";
 import { CONFIG } from "./config";
 import { Game } from "./Game";
 import { EVENTS } from "./events";
 
 export class PlatformManager {
   private platformColumns: PlatformColumn[] = [];
-
+  platformsGenerator?: Phaser.Time.TimerEvent;
+  private isFalling = false;
   constructor(private scene: Game) {
     const { height, width } = this.scene.scale;
 
@@ -24,6 +25,28 @@ export class PlatformManager {
     );
 
     this.initAnimations();
+
+    this.scene.eventBus.once(EVENTS.REACH_COINS_LIMIT, () =>
+      this.handleReachCoinsLimit()
+    );
+  }
+
+  private handleReachCoinsLimit() {
+    this.platformsGenerator?.remove();
+
+    const xPos =
+      this.platformColumns[this.platformColumns.length - 1].getMaxX() + 40;
+    const yPos =
+      this.platformColumns[this.platformColumns.length - 1].getMinY() + 40;
+    const lastColumn = new PlatformColumn(
+      this.scene,
+      xPos,
+      yPos,
+      1,
+      false,
+      true
+    );
+    this.platformColumns.push(lastColumn);
   }
 
   private initAnimations(): void {
@@ -52,10 +75,25 @@ export class PlatformManager {
         repeat: -1,
       });
     }
+    // Animation for mew
+    if (!this.scene.anims.exists("mew")) {
+      this.scene.anims.create({
+        key: "mew",
+        frames: this.scene.anims.generateFrameNumbers("mew-sprite", {
+          start: 0,
+          end: 1,
+        }),
+        frameRate: 2,
+        repeat: -1,
+      });
+    }
   }
+
+  public createLastPlatform(): void {}
 
   public createMorePlatforms(): void {
     const { width } = this.scene.scale;
+
     const lastColumn = this.platformColumns[this.platformColumns.length - 1];
     const lastPlatformGroup = lastColumn.getGroup();
     const groupMaxX = Math.max(
@@ -89,14 +127,14 @@ export class PlatformManager {
       );
       this.platformColumns.push(newColumn);
 
-      const newColumnMinY = newColumn.minY;
+      const newColumnMinY = newColumn.getMinY();
 
       if (Math.abs(newColumnMinY - newY) > 50) {
         const selectedPattern =
           patterns[PhaserMath.Between(0, patterns.length - 1)];
         const lowerColumn = new PlatformColumn(
           this.scene,
-          newColumn.maxX + columnGap + 20,
+          newColumn.getMaxX() + columnGap + 20,
           newY + 10,
           selectedPattern
         );
@@ -111,7 +149,11 @@ export class PlatformManager {
       .getLast(true) as GameObjects.Image;
 
     const lastPlatformY = lastPlatform ? lastPlatform.y : 0;
-    if (this.scene.heroManager.sprite.y > Math.abs(lastPlatformY) + 1000) {
+    if (
+      !this.isFalling &&
+      this.scene.heroManager.sprite.y > Math.abs(lastPlatformY) + 1000
+    ) {
+      this.isFalling = true;
       this.handleFall();
     }
   }
@@ -120,23 +162,22 @@ export class PlatformManager {
     this.platformColumns.forEach((column) => {
       column.removeColumn();
     });
-
-    this.platformColumns = [];
   }
 
   private handleFall(): void {
+    this.scene.eventBus.removeListener(EVENTS.REACH_COINS_LIMIT);
     this.resetPlatforms();
     this.scene.eventBus.emit(EVENTS.FALL);
   }
 
-  public startGeneratePlatforms(): void {
-    this.scene.time.addEvent({
+  public startGeneratePlatforms = (): void => {
+    this.platformsGenerator = this.scene.time.addEvent({
       delay: 500,
       callback: this.createMorePlatforms,
       callbackScope: this,
       loop: true,
     });
-  }
+  };
 }
 
 export class PlatformColumn {
@@ -150,13 +191,16 @@ export class PlatformColumn {
     private x: number,
     private y: number,
     private count: number,
-    private isInit?: boolean
+    private isInit?: boolean,
+    private isLast?: boolean
   ) {
     this.platforms = this.scene.physics.add.staticGroup();
     this.bushes = this.scene.physics.add.staticGroup();
     this.platformGroup = this.scene.add.group();
+    const name = `X: ${x}, Y: ${y}. isInit: ${this.isInit},isLast: ${this.isLast}`;
+    this.platformGroup.setName(name);
 
-    this.createColumn(isInit);
+    this.createColumn(this.isInit);
     this.scene.physics.add.overlap(
       this.scene.heroManager.sprite,
       this.bushes,
@@ -183,6 +227,7 @@ export class PlatformColumn {
     hero: Physics.Arcade.Sprite,
     platform: Physics.Arcade.Sprite
   ): void {
+    if (this.isLast) return;
     // Define the threshold for being "close to the end" of the platform
     const closeThreshold = 1500;
 
@@ -192,14 +237,20 @@ export class PlatformColumn {
     const platformEndX = platform.width;
 
     // Check if the hero is within the threshold of the end of the platform
-    if (platformEndX - heroX <= closeThreshold) {
+
+    if (
+      platformEndX - heroX <= closeThreshold &&
+      !this.scene.platformManager.platformsGenerator &&
+      !this.isLast
+    ) {
       // Start generating more platforms
       this.scene.platformManager.startGeneratePlatforms();
     }
   }
 
   private createColumn(isInit: boolean = false): void {
-    const counter = isInit ? 1 : this.count;
+    const counter = isInit || this.isLast ? 1 : this.count;
+
     const xPos = isInit ? -70 : this.x + PhaserMath.Between(0, 50);
     let lastY = this.y;
     for (let i = 0; i < counter; i++) {
@@ -213,13 +264,13 @@ export class PlatformColumn {
     let lastX = x;
 
     for (let i = 0; i < platformLength; i++) {
-      const texture = this.isInit ? "menu-ground" : "platform";
+      const texture = this.isInit || this.isLast ? "menu-ground" : "platform";
       const block = this.platforms.create(lastX, y, texture);
 
-      const origin = this.isInit ? [0, 0] : [0, 1];
+      const origin = this.isInit || this.isLast ? [0, 0] : [0, 1];
       block.setOrigin(...origin);
       block.setDepth(1);
-      block.setScale(this.isInit ? 0.4 : CONFIG.scale);
+      block.setScale(this.isInit || this.isLast ? 0.4 : CONFIG.scale);
       block.refreshBody();
       block.body.checkCollision.up = true;
       block.body.checkCollision.down = false;
@@ -228,7 +279,7 @@ export class PlatformColumn {
       this.platformGroup.add(block);
       lastX += block.displayWidth;
 
-      if (this.isInit) break;
+      if (this.isInit || this.isLast) break;
 
       if (i > 3 && platformLength > 3 && PhaserMath.Between(0, 8) === 1) {
         this.createBushes(lastX - block.displayWidth, y - block.displayHeight);
@@ -246,7 +297,7 @@ export class PlatformColumn {
   private collectNpc(
     hero: GameObjects.Sprite,
     npc: Physics.Arcade.Sprite,
-    name: "pepe" | "doge"
+    name: "pepe" | "doge" | "mew"
   ): void {
     // this.scene.sound?.play("coin");
     npc.disableBody(true, false);
@@ -266,11 +317,13 @@ export class PlatformColumn {
     this.scene.eventBus.emit(eventName);
   }
   private createNpc(x: number, y: number) {
-    if (PhaserMath.Between(1, 2) === 1) {
-      this.createDoge(x, y);
-    } else {
-      this.createPepe(x, y);
-    }
+    const meme = PhaserMath.Between(1, 2);
+    const memeMap: Record<number, (x: number, y: number) => void> = {
+      1: () => this.createPepe(x, y),
+      2: () => this.createDoge(x, y),
+      // 3: () => this.createMew(x, y),
+    };
+    memeMap[meme](x, y);
   }
 
   private createPepe(x: number, y: number) {
@@ -291,10 +344,18 @@ export class PlatformColumn {
     this.addNpcOverlap(doge, "doge");
     doge.anims.play("doge");
   }
+  private createMew(x: number, y: number) {
+    const mew = this.scene.physics.add
+      .sprite(x, y + 10, "mew-sprite")
+      .setScale(0.12)
+      .setDepth(2);
+    this.addNpcOverlap(mew, "mew");
+    mew.anims.play("mew");
+  }
 
   private addNpcOverlap(
     npc: Physics.Arcade.Sprite,
-    name: "pepe" | "doge"
+    name: "pepe" | "doge" | "mew"
   ): void {
     this.scene.physics.add.overlap(
       this.scene.heroManager.sprite,
@@ -316,6 +377,10 @@ export class PlatformColumn {
       .setDepth(2)
       .setScale(0.1)
       .refreshBody();
+  }
+
+  private resetBushes(): void {
+    this.bushes.clear(true, true);
   }
 
   private hitBush(
@@ -344,18 +409,17 @@ export class PlatformColumn {
   public getGroup(): GameObjects.Group {
     return this.platformGroup;
   }
-  public get minY(): number {
-    return Math.min(
-      ...this.platforms
-        .getChildren()
-        .map((item) => (item as GameObjects.Image).y)
-    );
+  public getMinY(): number {
+    const childrenY = this.platforms
+      ?.getChildren()
+      .map((item) => (item as GameObjects.Image).y);
+    return Math.min(...childrenY);
   }
-  public get maxX(): number {
-    return Math.max(
-      ...this.platforms
-        .getChildren()
-        .map((item) => (item as GameObjects.Image).x)
-    );
-  }
+  public getMaxX = (): number => {
+    const childrenX = this.platforms.children?.entries.map(
+      (item) => (item as GameObjects.Image).x
+    ) || [0];
+
+    return Math.max(...childrenX);
+  };
 }

@@ -8,13 +8,14 @@ export class HeroManager {
   private hp: number;
   public shieldBoosterActive = false;
   public jumpBoosterActive = false;
+  public magnetBoosterActive = false;
   private jumpTwice = false;
   constructor(private scene: Game) {
     this.hero = this.scene.physics.add
       .sprite(
         CONFIG.startPosition.x,
         this.scene.scale.height - CONFIG.startPosition.y,
-        "hero_walk_sprite"
+        "hero-walk-sprite"
       )
       .setOffset(0, -40)
       .setScale(0.21)
@@ -22,6 +23,7 @@ export class HeroManager {
       .setDepth(2);
 
     this.initAnimations();
+
     this.scene.cameras.main.startFollow(
       this.hero,
       undefined,
@@ -63,6 +65,28 @@ export class HeroManager {
         callbackScope: this,
       });
     });
+    this.scene.eventBus.on(EVENTS.COLLECT_MEW, () => {
+      this.magnetBoosterActive = true;
+      this.scene.time.addEvent({
+        delay: this.magnetDuration * 1000,
+        callback: () => {
+          this.magnetBoosterActive = false;
+        },
+        callbackScope: this,
+      });
+    });
+  }
+
+  public update(): void {
+    this.handleInput();
+  }
+
+  // public destroy(): void {
+  //   this.scene.eventBus.
+  // }
+
+  private handleInput() {
+    this.scene.eventBus.emit(EVENTS.HERO_RUN, this.hero.x, this.hero.y);
   }
 
   private get livesCount(): number {
@@ -81,6 +105,12 @@ export class HeroManager {
   private get jumpDuration(): number {
     return this.jumpLevel * 5;
   }
+  private get magnetLevel(): number {
+    return this.scene.appState.getGameProp("mewLevel") || 1;
+  }
+  private get magnetDuration(): number {
+    return this.magnetLevel * 5;
+  }
   resetPosition(): void {
     this.hero.setPosition(
       CONFIG.startPosition.x,
@@ -95,7 +125,7 @@ export class HeroManager {
     if (!this.scene.anims.exists("walk")) {
       this.scene.anims.create({
         key: "walk",
-        frames: this.scene.anims.generateFrameNumbers("hero_walk_sprite", {
+        frames: this.scene.anims.generateFrameNumbers("hero-walk-sprite", {
           start: 0,
           end: 4,
         }),
@@ -108,7 +138,7 @@ export class HeroManager {
     if (!this.scene.anims.exists("jump")) {
       this.scene.anims.create({
         key: "jump",
-        frames: this.scene.anims.generateFrameNumbers("hero_jump_sprite", {
+        frames: this.scene.anims.generateFrameNumbers("hero-jump-sprite", {
           start: 0,
           end: 3,
         }),
@@ -150,13 +180,13 @@ export class HeroManager {
         this.hero.anims.play("jump");
       }
       if (isGettingUp) {
-        this.hero.setTexture("hero_jump_sprite", 1);
+        this.hero.setTexture("hero-jump-sprite", 1);
       }
       if (isGettingDown) {
-        this.hero.setTexture("hero_jump_sprite", 2);
+        this.hero.setTexture("hero-jump-sprite", 2);
       }
     } else if (this.hero.anims.currentAnim?.key !== "walk") {
-      this.hero.setTexture("hero_walk_sprite", 1);
+      this.hero.setTexture("hero-walk-sprite", 1);
       this.hero.anims.play("walk");
     }
     if (this.hero.body?.touching.down) {

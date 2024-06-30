@@ -37,11 +37,15 @@ export class Boot extends Scene {
     this.load.audio("jump", "audio/jumpSound.mp3");
 
     // Load spritesheets
-    this.load.spritesheet("hero_walk_sprite", "assets/hero_walk_sprite.png", {
+    this.load.spritesheet("hero-walk-sprite", "assets/hero-walk-sprite.png", {
       frameWidth: 296,
       frameHeight: 208,
     });
-    this.load.spritesheet("hero_jump_sprite", "assets/hero_jump_sprite.png", {
+    this.load.spritesheet("hero-jump-sprite", "assets/hero-jump-sprite.png", {
+      frameWidth: 296,
+      frameHeight: 209,
+    });
+    this.load.spritesheet("hero-sleep-sprite", "assets/hero-sleep-sprite.png", {
       frameWidth: 296,
       frameHeight: 209,
     });
@@ -53,6 +57,10 @@ export class Boot extends Scene {
     this.load.spritesheet("pepe-sprite", "assets/pepe-sprite.png", {
       frameWidth: 320,
       frameHeight: 440,
+    });
+    this.load.spritesheet("mew-sprite", "assets/mew-sprite.png", {
+      frameWidth: 360,
+      frameHeight: 510,
     });
   }
 

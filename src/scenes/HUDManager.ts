@@ -39,6 +39,9 @@ export class HUDManager extends Scene {
     this.eventBus.on(EVENTS.COIN_COLLECTED, (count: number) => {
       this.updateCoinsCount(count);
     });
+    this.eventBus.on(EVENTS.RESTART_GAME, () => {
+      this.scene.restart();
+    });
   }
 
   update() {}
