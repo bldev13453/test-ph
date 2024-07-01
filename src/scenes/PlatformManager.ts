@@ -18,12 +18,6 @@ export class PlatformManager {
       true
     );
     this.platformColumns.push(initialColumn);
-
-    this.scene.physics.add.collider(
-      this.scene.heroManager.sprite,
-      initialColumn.getGroup()
-    );
-
     this.initAnimations();
 
     this.scene.eventBus.once(EVENTS.REACH_COINS_LIMIT, () =>
@@ -101,8 +95,10 @@ export class PlatformManager {
         .getChildren()
         .map((item) => (item as GameObjects.Image).x)
     );
+    const groupMinY = lastColumn.getMinY();
 
     const lastPlatform = lastPlatformGroup.getLast(true) as GameObjects.Image;
+
     const isFirstColumn = this.platformColumns.length === 1;
     if (
       lastPlatform &&
@@ -117,7 +113,7 @@ export class PlatformManager {
 
       const newY = isFirstColumn
         ? lastPlatform.y + 60
-        : lastPlatform.y - PhaserMath.Between(-20, 20);
+        : groupMinY - PhaserMath.Between(10, 30);
 
       const newColumn = new PlatformColumn(
         this.scene,
@@ -151,7 +147,8 @@ export class PlatformManager {
     const lastPlatformY = lastPlatform ? lastPlatform.y : 0;
     if (
       !this.isFalling &&
-      this.scene.heroManager.sprite.y > Math.abs(lastPlatformY) + 1000
+      this.scene.heroManager.heroContainerSprite.y >
+        Math.abs(lastPlatformY) + 1000
     ) {
       this.isFalling = true;
       this.handleFall();
@@ -197,7 +194,7 @@ export class PlatformColumn {
     this.platforms = this.scene.physics.add.staticGroup();
     this.bushes = this.scene.physics.add.staticGroup();
     this.platformGroup = this.scene.add.group();
-    const name = `X: ${x}, Y: ${y}. isInit: ${this.isInit},isLast: ${this.isLast}`;
+    const name = `X: ${x}, Y: ${y}. isInit: ${this.isInit}, isLast: ${this.isLast}`;
     this.platformGroup.setName(name);
 
     this.createColumn(this.isInit);
@@ -210,7 +207,7 @@ export class PlatformColumn {
     );
 
     this.scene.physics.add.collider(
-      this.scene.heroManager.sprite,
+      this.scene.heroManager.heroContainerSprite.gameObject,
       this.platformGroup,
       (obj1, obj2) => {
         if (this.isInit) {
@@ -232,7 +229,7 @@ export class PlatformColumn {
     const closeThreshold = 1500;
 
     // Get the positions
-    const heroX = hero.x;
+    const heroX = this.scene.heroManager.heroContainerSprite.x;
 
     const platformEndX = platform.width;
 
@@ -391,7 +388,7 @@ export class PlatformColumn {
     if (this.isHeroDamaged) return;
 
     this.isHeroDamaged = true;
-    hero.setTint(0xff0000);
+    this.scene.heroManager.sprite.setTint(0xff0000);
     this.scene.time.addEvent({
       delay: 200,
       callback: () => {
@@ -410,10 +407,10 @@ export class PlatformColumn {
     return this.platformGroup;
   }
   public getMinY(): number {
-    const childrenY = this.platforms
-      ?.getChildren()
-      .map((item) => (item as GameObjects.Image).y);
-    return Math.min(...childrenY);
+    const childrenY = this.platforms?.getChildren().map((item) => {
+      return (item as GameObjects.Image).y;
+    });
+    return Math.max(...childrenY); // more is lower
   }
   public getMaxX = (): number => {
     const childrenX = this.platforms.children?.entries.map(

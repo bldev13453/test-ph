@@ -1,31 +1,55 @@
-import { Physics } from "phaser";
+import { Physics, GameObjects } from "phaser";
 import { CONFIG } from "./config";
 import { Game } from "./Game";
 import { EVENTS } from "./events";
 
 export class HeroManager {
   private hero: Physics.Arcade.Sprite;
+  private shield: GameObjects.Sprite;
+  private container: GameObjects.Container; // Container for hero and shield
   private hp: number;
   public shieldBoosterActive = false;
   public jumpBoosterActive = false;
   public magnetBoosterActive = false;
   private jumpTwice = false;
+
   constructor(private scene: Game) {
+    // Create hero sprite
     this.hero = this.scene.physics.add
-      .sprite(
-        CONFIG.startPosition.x,
-        this.scene.scale.height - CONFIG.startPosition.y,
-        "hero-walk-sprite"
-      )
-      .setOffset(0, -40)
-      .setScale(0.21)
-      .setGravityY(CONFIG.gravityY)
-      .setDepth(2);
+      .sprite(0, 0, "hero-walk-sprite")
+      .setOffset(0, 0)
+      .setScale(0.21);
+
+    // Create shield sprite but initially invisible
+    this.shield = this.scene.add
+      .sprite(0, 0, "bubble-shield")
+      .setScale(0.25)
+      .setVisible(false);
+
+    // Create container and add hero and shield to it
+    this.container = this.scene.add.container(
+      CONFIG.startPosition.x,
+      this.scene.scale.height - CONFIG.startPosition.y,
+      [this.hero, this.shield]
+    );
+    this.scene.physics.world.enable(this.container); // Enable physics for the container
+
+    // Adjust physics body to match hero sprite
+    const body = this.container.body as Physics.Arcade.Body;
+    body.setSize(
+      this.hero.width * this.hero.scaleX,
+      this.hero.height * this.hero.scaleY
+    );
+    body.setOffset(0, -35);
+    body.setGravityY(CONFIG.gravityY);
+
+    // Set depth
+    this.container.setDepth(2);
 
     this.initAnimations();
 
     this.scene.cameras.main.startFollow(
-      this.hero,
+      this.container,
       undefined,
       undefined,
       0.02,
@@ -34,59 +58,80 @@ export class HeroManager {
     );
 
     this.hp = this.livesCount;
-    this.scene.eventBus.on(EVENTS.HIT, () => {
-      this.setHp(this.hp - 1);
-      this.scene.appState.setGameProp("hpAmount", this.hp);
-      this.scene.restartScene();
-    });
-    this.scene.eventBus.on(EVENTS.FALL, () => {
-      this.setHp(this.hp - 1);
-      this.scene.appState.setGameProp("hpAmount", this.hp);
-      this.scene.restartScene();
-    });
-    this.scene.eventBus.on(EVENTS.COLLECT_PEPE, () => {
-      this.shieldBoosterActive = true;
+    this.scene.eventBus.on(EVENTS.HIT, this.handleHit, this);
+    this.scene.eventBus.on(EVENTS.FALL, this.handleFall, this);
+    this.scene.eventBus.on(EVENTS.COLLECT_PEPE, this.activateShield, this);
+    this.scene.eventBus.on(EVENTS.COLLECT_DOGE, this.activateJumpBooster, this);
+    this.scene.eventBus.on(
+      EVENTS.COLLECT_MEW,
+      this.activateMagnetBooster,
+      this
+    );
+  }
 
-      this.scene.time.addEvent({
-        delay: this.shieldDuration * 1000,
-        callback: () => {
-          this.shieldBoosterActive = false;
-        },
-        callbackScope: this,
-      });
+  private handleHit(): void {
+    this.setHp(this.hp - 1);
+    this.scene.appState.setGameProp("hpAmount", this.hp);
+    this.scene.restartScene();
+  }
+
+  private handleFall(): void {
+    this.setHp(this.hp - 1);
+    this.scene.appState.setGameProp("hpAmount", this.hp);
+    this.scene.restartScene();
+  }
+
+  private activateShield(): void {
+    this.shieldBoosterActive = true;
+    this.shield.setVisible(true);
+
+    this.scene.time.addEvent({
+      delay: this.shieldDuration * 1000,
+      callback: () => {
+        this.shieldBoosterActive = false;
+        this.shield.setVisible(false);
+      },
+      callbackScope: this,
     });
-    this.scene.eventBus.on(EVENTS.COLLECT_DOGE, () => {
-      this.jumpBoosterActive = true;
-      this.scene.time.addEvent({
-        delay: this.jumpDuration * 1000,
-        callback: () => {
-          this.jumpBoosterActive = false;
-        },
-        callbackScope: this,
-      });
+  }
+
+  private activateJumpBooster(): void {
+    this.jumpBoosterActive = true;
+    this.scene.time.addEvent({
+      delay: this.jumpDuration * 1000,
+      callback: () => {
+        this.jumpBoosterActive = false;
+      },
+      callbackScope: this,
     });
-    this.scene.eventBus.on(EVENTS.COLLECT_MEW, () => {
-      this.magnetBoosterActive = true;
-      this.scene.time.addEvent({
-        delay: this.magnetDuration * 1000,
-        callback: () => {
-          this.magnetBoosterActive = false;
-        },
-        callbackScope: this,
-      });
+  }
+
+  private activateMagnetBooster(): void {
+    this.magnetBoosterActive = true;
+    this.scene.time.addEvent({
+      delay: this.magnetDuration * 1000,
+      callback: () => {
+        this.magnetBoosterActive = false;
+      },
+      callbackScope: this,
     });
   }
 
   public update(): void {
     this.handleInput();
+
+    // Ensure the shield and hero are properly positioned in the container
+    this.shield.setPosition(this.hero.x, this.hero.y);
   }
 
-  // public destroy(): void {
-  //   this.scene.eventBus.
-  // }
+  // Remainder of your class code...
 
   private handleInput() {
-    this.scene.eventBus.emit(EVENTS.HERO_RUN, this.hero.x, this.hero.y);
+    this.scene.eventBus.emit(
+      EVENTS.HERO_RUN,
+      this.container.x,
+      this.container.y
+    );
   }
 
   private get livesCount(): number {
@@ -111,15 +156,18 @@ export class HeroManager {
   private get magnetDuration(): number {
     return this.magnetLevel * 5;
   }
+
   resetPosition(): void {
-    this.hero.setPosition(
+    this.container.setPosition(
       CONFIG.startPosition.x,
       this.scene.scale.height - CONFIG.startPosition.y
     );
-    this.hero.setVelocityX(0);
+    const body = this.container.body as Physics.Arcade.Body;
+    body.setVelocityX(0);
     this.hero.anims.play("walk");
     this.hero.setFrame(0);
   }
+
   private initAnimations(): void {
     // Animation for walking
     if (!this.scene.anims.exists("walk")) {
@@ -149,28 +197,27 @@ export class HeroManager {
   }
 
   public start(): void {
+    const body = this.container.body as Physics.Arcade.Body;
     this.hero.anims.play("walk");
-    this.hero.setVelocityX(CONFIG.heroSpeed);
+    body.setVelocityX(CONFIG.heroSpeed);
   }
 
   public jump(): void {
-    if (this.hero.body?.touching.down) {
+    const body = this.container.body as Physics.Arcade.Body;
+    if (body.touching.down) {
       this.scene.sound.play("jump");
-      this.hero.setVelocityY(-CONFIG.jumpPower);
+      body.setVelocityY(-CONFIG.jumpPower);
     }
-    if (
-      this.jumpBoosterActive &&
-      !this.hero.body?.touching.down &&
-      !this.jumpTwice
-    ) {
+    if (this.jumpBoosterActive && !body.touching.down && !this.jumpTwice) {
       this.scene.sound.play("jump");
-      this.hero.setVelocityY(-CONFIG.jumpPower);
+      body.setVelocityY(-CONFIG.jumpPower);
       this.jumpTwice = true;
     }
   }
 
   public updateAnimations(): void {
-    const deltaY = this.hero.body?.deltaY() || 0;
+    const body = this.container.body as Physics.Arcade.Body;
+    const deltaY = body.deltaY() || 0;
     const isGettingUp = deltaY < -0.2;
     const isGettingDown = deltaY > 0.2;
     const isJumping = isGettingUp || isGettingDown;
@@ -189,25 +236,26 @@ export class HeroManager {
       this.hero.setTexture("hero-walk-sprite", 1);
       this.hero.anims.play("walk");
     }
-    if (this.hero.body?.touching.down) {
+    if (body.touching.down) {
       this.jumpTwice = false;
     }
   }
-  hit() {
-    this.setHp(this.currentHp - 1);
-  }
-  private setHp = (hp: number): void => {
+
+  private setHp(hp: number): void {
     if (hp === 0) {
       this.hp = 3;
     } else {
       this.hp = hp;
     }
-  };
+  }
 
   get currentHp(): number {
     return this.hp;
   }
 
+  public get heroContainerSprite(): Physics.Arcade.Body {
+    return this.container.body as Physics.Arcade.Body;
+  }
   public get sprite(): Physics.Arcade.Sprite {
     return this.hero;
   }
