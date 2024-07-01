@@ -127,11 +127,12 @@ export class HUDManager extends Scene {
     this.startText = this.add
       .text(
         this.cameras.main.worldView.x + this.cameras.main.width / 2,
-        this.cameras.main.worldView.y + this.cameras.main.height / 2,
+        this.cameras.main.worldView.y + this.cameras.main.height / 2 + 70,
         "tap to start",
         {
           fontSize: "24px",
           fontFamily: '"Press Start 2P"',
+          fixedHeight: 200,
         }
       )
       .setOrigin(0.5)
