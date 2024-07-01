@@ -28,6 +28,9 @@ export class Game extends Scene {
     this.platformManager = new PlatformManager(this);
 
     this.input.on("pointerdown", this.handleClick, this);
+    this.eventBus.on(EVENTS.START_GAME, () => {
+      this.start();
+    });
     this.eventBus.on(EVENTS.PAUSE_GAME, () => {
       this.scene.pause();
     });
@@ -50,7 +53,6 @@ export class Game extends Scene {
   }
 
   start(): void {
-    this.eventBus.emit(EVENTS.START_GAME);
     this.gameState = "play";
     this.heroManager.start();
   }
@@ -72,7 +74,7 @@ export class Game extends Scene {
 
   handleClick(): void {
     if (this.gameState === "start") {
-      this.start();
+      return;
     } else {
       this.heroManager.jump();
     }

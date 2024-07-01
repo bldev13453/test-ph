@@ -8,6 +8,7 @@ import type {
 } from "../api/memegame-api";
 interface ExtendedModelState extends ModelsState {
   mewLevel: number;
+  soundMuted: boolean;
 }
 export interface IAppState {
   initState(): Promise<void>;
@@ -23,6 +24,28 @@ export interface IAppState {
   getUserProp<T extends keyof ModelsUser>(key: T): ModelsUser[T];
 }
 
+interface LocalStorageState {
+  soundMuted: string;
+}
+export const useLocalStorage = () => {
+  const getPersistentProp = <T extends keyof LocalStorageState>(
+    key: T
+  ): LocalStorageState[T] | null => {
+    return localStorage.getItem(key) as LocalStorageState[T] | null;
+  };
+  const setPersistentProp = <T extends keyof LocalStorageState>(
+    key: T,
+    value: LocalStorageState[T]
+  ) => {
+    localStorage.setItem(key, String(value));
+  };
+
+  return {
+    getPersistentProp,
+    setPersistentProp,
+  };
+};
+
 class AppState extends Data.DataManager implements IAppState {
   private gameState: ExtendedModelState = {
     dogeLevel: 0,
@@ -32,6 +55,7 @@ class AppState extends Data.DataManager implements IAppState {
     hpLevel: 0,
     hpFillsAt: "",
     tokenAmount: 0,
+    soundMuted: false,
   };
 
   constructor() {
@@ -71,6 +95,12 @@ class AppState extends Data.DataManager implements IAppState {
   async initState() {
     const state = await getState();
     this.setState(state as ModelsUserState & { state: ExtendedModelState });
+    const { getPersistentProp } = useLocalStorage();
+    const soundMuted = getPersistentProp("soundMuted")
+      ? getPersistentProp("soundMuted") === "true"
+      : false;
+
+    this.setGameProp("soundMuted", soundMuted);
   }
 }
 

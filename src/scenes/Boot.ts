@@ -1,5 +1,5 @@
 import { Scene } from "phaser";
-import appState from "./AppState";
+import appState, { useLocalStorage } from "./AppState";
 
 export class Boot extends Scene {
   constructor() {
@@ -16,6 +16,12 @@ export class Boot extends Scene {
     this.load.image("friends-button", "assets/friends-button.png");
     this.load.image("pause-button", "assets/pause-button.png");
     this.load.image("settings-button", "assets/settings-button.png");
+    this.load.image(
+      "settings-hover-button",
+      "assets/settings-hover-button.png"
+    );
+    this.load.image("sound-on-button", "assets/sound-on-button.png");
+    this.load.image("sound-off-button", "assets/sound-off-button.png");
     this.load.image("back-button", "assets/back-button.png");
     this.load.image("card-base", "assets/card-base.png");
     this.load.image("card-doge", "assets/card-doge.png");
@@ -79,6 +85,7 @@ export class Boot extends Scene {
     });
 
     await appState.initState();
+
     this.scene.launch("Preloader").launch("Game").launch("HUD");
   }
 }
