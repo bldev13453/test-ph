@@ -22,6 +22,8 @@ export interface IAppState {
     key: T
   ): ExtendedModelState[T];
   getUserProp<T extends keyof ModelsUser>(key: T): ModelsUser[T];
+  getShieldDuration(): number;
+  getJumpDuration(): number;
 }
 
 interface LocalStorageState {
@@ -90,6 +92,14 @@ class AppState extends Data.DataManager implements IAppState {
   setState({ user, state }: ModelsUserState & { state: ExtendedModelState }) {
     this.userState = user!;
     this.gameState = state!;
+  }
+
+  getShieldDuration(): number {
+    return (this.getGameProp("pepeLevel") || 1) * 5;
+  }
+
+  getJumpDuration(): number {
+    return (this.getGameProp("dogeLevel") || 1) * 5;
   }
 
   async initState() {

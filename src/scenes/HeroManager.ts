@@ -86,7 +86,7 @@ export class HeroManager {
     this.shield.setVisible(true);
 
     this.scene.time.addEvent({
-      delay: this.shieldDuration * 1000,
+      delay: this.scene.appState.getShieldDuration() * 1000,
       callback: () => {
         this.shieldBoosterActive = false;
         this.shield.setVisible(false);
@@ -98,7 +98,7 @@ export class HeroManager {
   private activateJumpBooster(): void {
     this.jumpBoosterActive = true;
     this.scene.time.addEvent({
-      delay: this.jumpDuration * 1000,
+      delay: this.scene.appState.getJumpDuration() * 1000,
       callback: () => {
         this.jumpBoosterActive = false;
       },
@@ -124,8 +124,6 @@ export class HeroManager {
     this.shield.setPosition(this.hero.x, this.hero.y);
   }
 
-  // Remainder of your class code...
-
   private handleInput() {
     this.scene.eventBus.emit(
       EVENTS.HERO_RUN,
@@ -138,18 +136,6 @@ export class HeroManager {
     return this.scene.appState.getGameProp("hpAmount") || 3;
   }
 
-  private get shieldLevel(): number {
-    return this.scene.appState.getGameProp("pepeLevel") || 1;
-  }
-  private get shieldDuration(): number {
-    return this.shieldLevel * 5; // seconds
-  }
-  private get jumpLevel(): number {
-    return this.scene.appState.getGameProp("dogeLevel") || 1;
-  }
-  private get jumpDuration(): number {
-    return this.jumpLevel * 5;
-  }
   private get magnetLevel(): number {
     return this.scene.appState.getGameProp("mewLevel") || 1;
   }

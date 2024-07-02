@@ -285,7 +285,7 @@ export class PlatformColumn {
           lastX - block.displayWidth / 2,
           y - 50
         );
-      } else if (PhaserMath.Between(0, 10) === 1) {
+      } else if (PhaserMath.Between(0, 40) === 1) {
         this.createNpc(lastX - block.displayWidth, y - 70);
       }
     }
@@ -311,6 +311,7 @@ export class PlatformColumn {
     });
     const eventName =
       name === "pepe" ? EVENTS.COLLECT_PEPE : EVENTS.COLLECT_DOGE;
+
     this.scene.eventBus.emit(eventName);
   }
   private createNpc(x: number, y: number) {

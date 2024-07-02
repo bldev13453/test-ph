@@ -29,6 +29,11 @@ export class Boot extends Scene {
     this.load.image("bush", "assets/bush.png");
     this.load.image("menu-ground", "assets/menu-ground.png");
     this.load.image("bubble-shield", "assets/bubble-shield.png");
+    this.load.image(
+      "shield-boost-indicator",
+      "assets/shield-boost-indicator.png"
+    );
+    this.load.image("jump-boost-indicator", "assets/jump-boost-indicator.png");
 
     this.load.image(
       "game-boosts-button-hover",

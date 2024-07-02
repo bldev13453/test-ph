@@ -1,3 +1,4 @@
+// Import necessary Phaser modules and assets
 import { GameObjects, Scene, Events } from "phaser";
 import { EventBus } from "./EventBus";
 import { EVENTS } from "./events";
@@ -13,13 +14,16 @@ export class HUDManager extends Scene {
   private boostsButton: GameObjects.Image;
   private friendsButton: GameObjects.Image;
   private eventBus: Events.EventEmitter;
-
   private settingsButton: GameObjects.Image;
   private settingsContainer: GameObjects.Container;
   private soundIcon: GameObjects.Image;
   private soundText: GameObjects.Text;
   private closeButton: GameObjects.Text;
   private buttonsContainer: GameObjects.Container; // New container for buttons
+
+  private boosterShield: GameObjects.Container;
+  private boosterJump: GameObjects.Container;
+  private activeBoosters: GameObjects.Container[];
 
   constructor(private readonly appState: IAppState) {
     super("HUD");
@@ -33,6 +37,9 @@ export class HUDManager extends Scene {
     this.showStartText();
     this.createButtonsContainer(); // Create the buttons container
     this.createSettingsContainer();
+
+    this.activeBoosters = [];
+
     this.eventBus.on(EVENTS.START_GAME, () => {
       this.hideStartText();
       this.hideSettingsButton();
@@ -51,6 +58,16 @@ export class HUDManager extends Scene {
     });
     this.eventBus.on(EVENTS.RESTART_GAME, () => {
       this.scene.restart();
+    });
+
+    this.eventBus.on(EVENTS.COLLECT_PEPE, () => {
+      const duration = this.appState.getShieldDuration();
+      this.showBooster("shield", duration);
+    });
+
+    this.eventBus.on(EVENTS.COLLECT_DOGE, () => {
+      const duration = this.appState.getJumpDuration();
+      this.showBooster("jump", duration);
     });
   }
 
@@ -127,15 +144,16 @@ export class HUDManager extends Scene {
     this.startText = this.add
       .text(
         this.cameras.main.worldView.x + this.cameras.main.width / 2,
-        this.cameras.main.worldView.y + this.cameras.main.height / 2 + 70,
+        this.cameras.main.worldView.y + this.cameras.main.height / 2,
         "tap to start",
         {
           fontSize: "24px",
           fontFamily: '"Press Start 2P"',
-          fixedHeight: 200,
+          fixedHeight: 550,
         }
       )
-      .setOrigin(0.5)
+      .setPadding(0, 275)
+      .setOrigin(0.5, 0.5)
       .setInteractive()
       .on("pointerdown", () => {
         this.eventBus.emit(EVENTS.START_GAME);
@@ -375,5 +393,85 @@ export class HUDManager extends Scene {
 
   public get lastHeart(): Phaser.GameObjects.GameObject | undefined {
     return this.hearts.getChildren().at(-1);
+  }
+
+  private showBooster(type: "jump" | "shield", duration: number): void {
+    let booster;
+
+    if (type === "shield") {
+      booster = this.boosterShield || this.createBooster(type);
+    } else {
+      booster = this.boosterJump || this.createBooster(type);
+    }
+    if (!booster?.active) {
+      booster = this.createBooster(type);
+    }
+
+    if (booster) {
+      const timerText = booster.getByName("timerText") as GameObjects.Text;
+
+      timerText.setText(duration.toString());
+      booster.setVisible(true);
+
+      if (!this.activeBoosters.find((item) => item.name === booster.name)) {
+        this.activeBoosters.push(booster);
+        this.repositionBoosters();
+      }
+
+      this.time.addEvent({
+        delay: 1000,
+        repeat: duration - 1,
+        callback: () => {
+          const remaining = parseInt(timerText.text) - 1;
+          timerText.setText(remaining.toString());
+          if (remaining <= 0) {
+            this.hideBooster(booster);
+          }
+        },
+      });
+    }
+  }
+
+  private createBooster(type: "shield" | "jump"): GameObjects.Container {
+    let iconKey: "shield-boost-indicator" | "jump-boost-indicator";
+    if (type === "shield") {
+      iconKey = "shield-boost-indicator";
+    } else {
+      iconKey = "jump-boost-indicator";
+    }
+
+    const icon = this.add.image(10, 10, iconKey).setScale(0.8);
+    const timerText = this.add
+      .text(40, 20, "0", {
+        fontSize: "12px",
+        fontFamily: '"Press Start 2P"',
+      })
+      .setOrigin(0.5)
+      .setName("timerText");
+
+    const boosterContainer = this.add
+      .container(15, 60, [icon, timerText])
+      .setVisible(false)
+      .setName(type);
+
+    if (type === "shield") {
+      this.boosterShield = boosterContainer;
+    } else if (type === "jump") {
+      this.boosterJump = boosterContainer;
+    }
+
+    return boosterContainer;
+  }
+
+  private hideBooster(booster: GameObjects.Container): void {
+    booster.setVisible(false);
+    this.activeBoosters = this.activeBoosters.filter((b) => b !== booster);
+    this.repositionBoosters();
+  }
+
+  private repositionBoosters(): void {
+    this.activeBoosters.forEach((booster, index) => {
+      booster.setPosition(15, 60 + index * 40);
+    });
   }
 }
